@@ -89,24 +89,30 @@ namespace VisionLibrary
                         double area = CvInvoke.ContourArea(contour);
                         if (area < MaxArea && area > MinArea)
                         {
-                            area = CvInvoke.ContourArea(contour);
                             Moments m = CvInvoke.Moments(contour, true);
 
                             PointF center = new PointF((float)(m.M10 / m.M00), (float)(m.M01 / m.M00));
+                            double[] data = { area, center.X, center.Y };
+                            centers.Add(data);
 
-                            Mat mask = new Mat(Src.Size, DepthType.Cv8U, 1);
-                            CvInvoke.FillPoly(mask, contours[i], new MCvScalar(255));
-                            double average_value = CvInvoke.Mean(threshold, mask).V0;
-                            if(WhiteClass && average_value >= 254)
-                            {
-                                double[] data = { area, center.X, center.Y };
-                                centers.Add(data);
-                            }
-                            if(!WhiteClass && average_value < 254)
-                            {
-                                double[] data = { area, center.X, center.Y };
-                                centers.Add(data);
-                            }
+                            //area = CvInvoke.ContourArea(contour);
+                            //Moments m = CvInvoke.Moments(contour, true);
+
+                            //PointF center = new PointF((float)(m.M10 / m.M00), (float)(m.M01 / m.M00));
+
+                            //Mat mask = new Mat(Src.Size, DepthType.Cv8U, 1);
+                            //CvInvoke.FillPoly(mask, contours[i], new MCvScalar(255));
+                            //double average_value = CvInvoke.Mean(threshold, mask).V0;
+                            //if(WhiteClass && average_value >= 254)
+                            //{
+                            //    double[] data = { area, center.X, center.Y };
+                            //    centers.Add(data);
+                            //}
+                            //if(!WhiteClass && average_value < 254)
+                            //{
+                            //    double[] data = { area, center.X, center.Y };
+                            //    centers.Add(data);
+                            //}
                         }
                     }
                 }
