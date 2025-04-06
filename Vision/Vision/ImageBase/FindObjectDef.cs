@@ -20,7 +20,6 @@ namespace VisionLibrary
 
         private PointF[] _points;
         private Rectangle[] _rectangles;
-        private int _whiteObject;
         private int _threshold;
         private int _minArea;
         private int _maxArea;
@@ -43,7 +42,6 @@ namespace VisionLibrary
             _minArea = ini.ReadInt(section, "MinArea", 300);
             _maxArea = ini.ReadInt(section, "MaxArea", 3660);
             _formula = ini.ReadStr(section, "Formula", "B-G");
-            _whiteObject = ini.ReadInt(section, "WhiteObject", 1);
             _isCorner = ini.ReadBool(section, "IsCorner", false);
             _cornerIndex = ini.ReadInt(section, "CornerIndex", 1);
 
@@ -59,7 +57,7 @@ namespace VisionLibrary
         public override void Inspect(Image<Bgr, byte> SrcImage)
         {
             Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula);
-            _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _whiteObject > 0, out _rectangles);
+            _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, out _rectangles);
             if(_isCorner)
             {
                 _points = new PointF[_rectangles.Length] ;

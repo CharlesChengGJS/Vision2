@@ -23,7 +23,7 @@ namespace VisionLibrary
             RightBottom
         }
         public static bool EnableScratchProcessFile = false;
-        public static PointF[] GetObjectCenter2(Image<Gray, byte> Src, int Threshold, int MinArea, int MaxArea, bool WhiteClass, out Rectangle[] Rectangles)
+        public static PointF[] GetObjectCenter2(Image<Gray, byte> Src, int Threshold, int MinArea, int MaxArea, out Rectangle[] Rectangles)
         {
             List<double[]> centers = new List<double[]>();
             List<Rectangle> rectangles = new List<Rectangle>();
@@ -47,7 +47,7 @@ namespace VisionLibrary
                             Moments m = CvInvoke.Moments(contour, true);
 
                             PointF center = new PointF((float)(m.M10 / m.M00), (float)(m.M01 / m.M00));
-                            if ((Src.Data[contour[0].Y, contour[0].X, 0] > Threshold) == WhiteClass)
+                      //      if ((Src.Data[contour[0].Y, contour[0].X, 0] > Threshold) == WhiteClass)
                             {
                                 double[] data = { area, center.X, center.Y };
                                 centers.Add(data);
