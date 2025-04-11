@@ -23,7 +23,7 @@ namespace VisionLibrary
             RightBottom
         }
         public static bool EnableScratchProcessFile = false;
-        public static PointF[] GetObjectCenter2(Image<Gray, byte> Src, int Threshold, int MinArea, int MaxArea, out Rectangle[] Rectangles)
+        public static PointF[] GetObjectCenter2(Image<Gray, byte> Src, int Threshold, int MinArea, int MaxArea, float ratio, out Rectangle[] Rectangles)
         {
             List<double[]> centers = new List<double[]>();
             List<Rectangle> rectangles = new List<Rectangle>();
@@ -58,13 +58,29 @@ namespace VisionLibrary
                 }
             }
 
-            double[][] orderData = centers.OrderBy(x => x[0]).ToArray();
-            PointF[] result = new PointF[orderData.Length];
+            for(int i = 0; i < centers.Count; i++)
+            {
+                float w = rectangles[i].Width;
+                float h = rectangles[i].Height;
+                float r = w / h;
+                if (w > h)
+                    r = h / w;
+
+                if(ratio > r)
+                {
+                    centers.RemoveAt(i);
+                    rectangles.RemoveAt(i);
+                    i--;
+                }
+            }
+
+           // double[][] orderData = centers.OrderBy(x => x[0]).ToArray();
+            PointF[] result = new PointF[centers.Count];
 
             for (int i = 0; i < result.Length; i++)
             {
-                result[i].X = (float)orderData[i][1];
-                result[i].Y = (float)orderData[i][2];
+                result[i].X = (float)centers[i][1];
+                result[i].Y = (float)centers[i][2];
             }
 
             Rectangles = rectangles.ToArray();

@@ -27,6 +27,7 @@ namespace VisionLibrary
         private bool _isCorner;
         /// <summary> 0 左上, 1 左下, 2 ,右下 3 右上 </summary>
         private int _cornerIndex; 
+        private float _ratio = 0.5f;
         public FindObjectDef(string SystemPath, int Index) : base(SystemPath, Index)
         {
             _points = new PointF[0];
@@ -44,6 +45,7 @@ namespace VisionLibrary
             _formula = ini.ReadStr(section, "Formula", "B-G");
             _isCorner = ini.ReadBool(section, "IsCorner", false);
             _cornerIndex = ini.ReadInt(section, "CornerIndex", 1);
+            _ratio = ini.ReadFloat(section, "Ratio", 0.5f);
 
             ini.FileClose();
             ini.Dispose();
@@ -57,7 +59,8 @@ namespace VisionLibrary
         public override void Inspect(Image<Bgr, byte> SrcImage)
         {
             Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula);
-            _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, out _rectangles);
+            _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out _rectangles);
+           
             if(_isCorner)
             {
                 _points = new PointF[_rectangles.Length] ;
