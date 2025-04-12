@@ -63,54 +63,58 @@ namespace VisionLibrary
             if (_isScale)
             {
                 Image<Bgr, byte> imageScale = new Image<Bgr, byte>(SrcImage.Width/2, SrcImage.Height/2);
+                Image<Bgr, byte> img = SrcImage.Clone(); 
                 CvInvoke.Resize(SrcImage, imageScale, new Size(0, 0), 0.5, 0.5, Inter.Linear);
                 
                 Image<Gray, byte> imageResult = ImageArithmetic(imageScale, _formula);
                 GetObjectCenter2(imageResult, _threshold, _minArea/4, _maxArea/4, _ratio, out _rectangles);
-
+                imageResult.Dispose();
                 List<PointF> listP = new List<PointF>();
                 List<Rectangle> listR = new List<Rectangle>();
-                Rectangle roi = SrcImage.ROI;
-                SrcImage.ROI = Rectangle.Empty;
+                img.ROI = Rectangle.Empty;
                 for (int i = 0; i < _rectangles.Length; i++)
                 {
-                    _rectangles[i].X = (int)(_rectangles[i].X * 2) - 2 + roi.X;
-                    _rectangles[i].Y = (int)(_rectangles[i].Y * 2) - 2 + roi.Y;
+                    _rectangles[i].X = (int)(_rectangles[i].X * 2) - 2 + SrcImage.ROI.X;
+                    _rectangles[i].Y = (int)(_rectangles[i].Y * 2) - 2 + SrcImage.ROI.Y;
 
-                    SrcImage.ROI = Rectangle.Empty;
+                  
                     _rectangles[i].Width = (int)(_rectangles[i].Width * 2) + 4;
                     _rectangles[i].Height = (int)(_rectangles[i].Height * 2 + 4);
                     if(_rectangles[i].X < 0)
                         _rectangles[i].X = 0;
                     if (_rectangles[i].Y < 0)
                         _rectangles[i].Y = 0;
-                    if (_rectangles[i].X + _rectangles[i].Width > SrcImage.Width)
-                        _rectangles[i].Width = SrcImage.Width - _rectangles[i].X;
-                    if (_rectangles[i].Y + _rectangles[i].Height > SrcImage.Height)
-                        _rectangles[i].Height = SrcImage.Height - _rectangles[i].Y;
+                    if (_rectangles[i].X + _rectangles[i].Width > img.Width)
+                        _rectangles[i].Width = img.Width - _rectangles[i].X;
+                    if (_rectangles[i].Y + _rectangles[i].Height > img.Height)
+                        _rectangles[i].Height = img.Height - _rectangles[i].Y;
                     if (_rectangles[i].Width < 0)
                         _rectangles[i].Width = 0;
                     if (_rectangles[i].Height < 0)
                         _rectangles[i].Height = 0;
 
                     Rectangle[] rectangles;
-                    SrcImage.ROI = _rectangles[i];
-                    imageResult = ImageArithmetic(SrcImage, _formula);
+                    img.ROI = _rectangles[i];
+                    imageResult = ImageArithmetic(img, _formula);
                     PointF[] ps = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out rectangles);
+                    imageResult.Dispose();
                     for(int j = 0; j < ps.Length; j++)
                     {
-                        ps[i].X = ps[i].X + SrcImage.ROI.X - roi.X;
-                        ps[i].Y = ps[i].Y + SrcImage.ROI.Y - roi.Y;
+                        ps[i].X = ps[i].X + img.ROI.X - SrcImage.ROI.X;
+                        ps[i].Y = ps[i].Y + img.ROI.Y - SrcImage.ROI.Y;
 
-                        rectangles[i].X = rectangles[i].X + SrcImage.ROI.X - roi.X;
-                        rectangles[i].Y = rectangles[i].Y + SrcImage.ROI.Y - roi.Y;
+                        rectangles[i].X = rectangles[i].X + img.ROI.X - SrcImage.ROI.X;
+                        rectangles[i].Y = rectangles[i].Y + img.ROI.Y - SrcImage.ROI.Y;
                     }
 
-
+                    
                     listR.AddRange(rectangles);
                     listP.AddRange(ps);
                 }
-                SrcImage.ROI = roi;
+
+                img.Dispose();
+                imageScale.Dispose();
+                
                 _points = listP.ToArray();
                 _rectangles = listR.ToArray();
             }
