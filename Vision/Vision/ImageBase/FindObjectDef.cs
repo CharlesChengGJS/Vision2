@@ -28,6 +28,7 @@ namespace VisionLibrary
         /// <summary> 0 左上, 1 左下, 2 ,右下 3 右上 </summary>
         private int _cornerIndex; 
         private float _ratio = 0.5f;
+        private bool _isScale = false;
         public FindObjectDef(string SystemPath, int Index) : base(SystemPath, Index)
         {
             _points = new PointF[0];
@@ -46,6 +47,7 @@ namespace VisionLibrary
             _isCorner = ini.ReadBool(section, "IsCorner", false);
             _cornerIndex = ini.ReadInt(section, "CornerIndex", 1);
             _ratio = ini.ReadFloat(section, "Ratio", 0.5f);
+            _isScale = ini.ReadBool(section, "Scale", true);
 
             ini.FileClose();
             ini.Dispose();
@@ -58,8 +60,66 @@ namespace VisionLibrary
 
         public override void Inspect(Image<Bgr, byte> SrcImage)
         {
-            Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula);
-            _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out _rectangles);
+            if (_isScale)
+            {
+                Image<Bgr, byte> imageScale = new Image<Bgr, byte>(SrcImage.Width/2, SrcImage.Height/2);
+                CvInvoke.Resize(SrcImage, imageScale, new Size(0, 0), 0.5, 0.5, Inter.Linear);
+                
+                Image<Gray, byte> imageResult = ImageArithmetic(imageScale, _formula);
+                GetObjectCenter2(imageResult, _threshold, _minArea/4, _maxArea/4, _ratio, out _rectangles);
+
+                List<PointF> listP = new List<PointF>();
+                List<Rectangle> listR = new List<Rectangle>();
+                Rectangle roi = SrcImage.ROI;
+                SrcImage.ROI = Rectangle.Empty;
+                for (int i = 0; i < _rectangles.Length; i++)
+                {
+                    _rectangles[i].X = (int)(_rectangles[i].X * 2) - 2 + roi.X;
+                    _rectangles[i].Y = (int)(_rectangles[i].Y * 2) - 2 + roi.Y;
+
+                    SrcImage.ROI = Rectangle.Empty;
+                    _rectangles[i].Width = (int)(_rectangles[i].Width * 2) + 4;
+                    _rectangles[i].Height = (int)(_rectangles[i].Height * 2 + 4);
+                    if(_rectangles[i].X < 0)
+                        _rectangles[i].X = 0;
+                    if (_rectangles[i].Y < 0)
+                        _rectangles[i].Y = 0;
+                    if (_rectangles[i].X + _rectangles[i].Width > SrcImage.Width)
+                        _rectangles[i].Width = SrcImage.Width - _rectangles[i].X;
+                    if (_rectangles[i].Y + _rectangles[i].Height > SrcImage.Height)
+                        _rectangles[i].Height = SrcImage.Height - _rectangles[i].Y;
+                    if (_rectangles[i].Width < 0)
+                        _rectangles[i].Width = 0;
+                    if (_rectangles[i].Height < 0)
+                        _rectangles[i].Height = 0;
+
+                    Rectangle[] rectangles;
+                    SrcImage.ROI = _rectangles[i];
+                    imageResult = ImageArithmetic(SrcImage, _formula);
+                    PointF[] ps = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out rectangles);
+                    for(int j = 0; j < ps.Length; j++)
+                    {
+                        ps[i].X = ps[i].X + SrcImage.ROI.X - roi.X;
+                        ps[i].Y = ps[i].Y + SrcImage.ROI.Y - roi.Y;
+
+                        rectangles[i].X = rectangles[i].X + SrcImage.ROI.X - roi.X;
+                        rectangles[i].Y = rectangles[i].Y + SrcImage.ROI.Y - roi.Y;
+                    }
+
+
+                    listR.AddRange(rectangles);
+                    listP.AddRange(ps);
+                }
+                SrcImage.ROI = roi;
+                _points = listP.ToArray();
+                _rectangles = listR.ToArray();
+            }
+            else
+            {
+                Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula);
+                _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out _rectangles);
+            }
+            
            
             if(_isCorner)
             {

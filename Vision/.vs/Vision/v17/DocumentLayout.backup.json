@@ -3,11 +3,15 @@
   "WorkspaceRootPath": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{00000000-0000-0000-0000-000000000000}|\u003CSolution\u003E|Vision||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|d:\\work\\git\\organization\\gjs-vision2\\vision\\vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\judgeobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\judgeobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{00000000-0000-0000-0000-000000000000}|\u003CSolution\u003E|Vision||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     },
     {
       "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\process\\process.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -16,10 +20,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\inpectbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\inpectbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\judgeobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\judgeobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\camera\\baslerdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -32,12 +32,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\camera\\logitechdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\camera\\logitechdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|d:\\work\\git\\organization\\gjs-vision2\\vision\\||{B270807C-D8C6-49EB-8EBE-8E8D566637A1}|5e9a8ac2-4f34-4521-858f-4c248ba31532"
     }
   ],
   "DocumentGroupContainers": [
@@ -47,7 +41,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Bookmark",
@@ -55,7 +49,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "InpectBase.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\InpectBase.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\InpectBase.cs",
@@ -63,25 +57,24 @@
               "RelativeToolTip": "Vision\\ImageBase\\InpectBase.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-05T08:05:35.568Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-05T08:05:35.568Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "FindObjectDef.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\FindObjectDef.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\FindObjectDef.cs",
               "ToolTip": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\FindObjectDef.cs",
               "RelativeToolTip": "Vision\\ImageBase\\FindObjectDef.cs",
-              "ViewState": "AgIAAEIAAAAAAAAAAAAlwEIAAAAmAAAAAAAAAA==",
+              "ViewState": "AgIAAE4AAAAAAAAAAAAQwGgAAABOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-17T01:51:49.718Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 1,
               "Title": "JudgeObjectDef.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\JudgeObjectDef.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\JudgeObjectDef.cs",
@@ -93,25 +86,14 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "Microsoft.Common.CurrentVersion.targets",
-              "DocumentMoniker": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
-              "ToolTip": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
-              "ViewState": "AQIAABoJAAAAAAAAAAAawC8JAAAEAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
-              "WhenOpened": "2023-10-25T08:31:57.175Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "Vision",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision.csproj",
               "RelativeDocumentMoniker": "Vision.csproj",
               "ToolTip": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision.csproj",
               "RelativeToolTip": "Vision.csproj",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2023-10-25T08:31:56.986Z",
-              "EditorCaption": ""
+              "WhenOpened": "2023-10-25T08:31:56.986Z"
             },
             {
               "$type": "Document",
@@ -127,7 +109,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "Process.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\Process\\Process.cs",
               "RelativeDocumentMoniker": "Vision\\Process\\Process.cs",
@@ -135,8 +117,7 @@
               "RelativeToolTip": "Vision\\Process\\Process.cs",
               "ViewState": "AgIAACwAAAAAAAAAAADwvzUAAABUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-08T02:00:26.505Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-08T02:00:26.505Z"
             },
             {
               "$type": "Document",
