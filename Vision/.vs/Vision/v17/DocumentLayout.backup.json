@@ -3,15 +3,15 @@
   "WorkspaceRootPath": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|d:\\work\\git\\organization\\gjs-vision2\\vision\\vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\judgeobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|d:\\work\\git\\organization\\gjs-vision2\\vision\\vision\\imagebase\\judgeobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\judgeobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{00000000-0000-0000-0000-000000000000}|\u003CSolution\u003E|Vision||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\process\\process.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -41,7 +41,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
@@ -61,32 +61,32 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "FindObjectDef.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\FindObjectDef.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\FindObjectDef.cs",
               "ToolTip": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\FindObjectDef.cs",
               "RelativeToolTip": "Vision\\ImageBase\\FindObjectDef.cs",
-              "ViewState": "AgIAADwAAAAAAAAAAIA6wEkAAAAqAAAAAAAAAA==",
+              "ViewState": "AgIAAFsAAAAAAAAAAAAjwEkAAAAqAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-17T01:51:49.718Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-17T01:51:49.718Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "JudgeObjectDef.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\JudgeObjectDef.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\JudgeObjectDef.cs",
               "ToolTip": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\JudgeObjectDef.cs",
               "RelativeToolTip": "Vision\\ImageBase\\JudgeObjectDef.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAFEAAAAAAAAAAAAQwFgAAACCAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-17T01:51:48.416Z"
+              "WhenOpened": "2025-03-17T01:51:48.416Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "Vision",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision.csproj",
               "RelativeDocumentMoniker": "Vision.csproj",
