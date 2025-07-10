@@ -11,11 +11,12 @@ using Emgu.CV.Structure;
 using System.Drawing;
 using FileStreamLibrary;
 using System.IO;
+using Flee.PublicTypes;
 using static VisionLibrary.Process;
 
 namespace VisionLibrary
 {
-    public class ProjectionEdge : InpectBase
+    public class FindEdge : InpectBase
     {
         /// <summary>灰階最大變化點/// </summary>
         private PointF[] _points;
@@ -23,8 +24,10 @@ namespace VisionLibrary
         private int _dir;
         /// <summary>找出灰階平均值最大斷差的比較間隔</summary>
         private int _interval;
+        private string _formula;
+        private bool _saveImage = false; // 是否儲存影像
 
-        public ProjectionEdge(string SystemPath, int Index) : base(SystemPath, Index)
+        public FindEdge(string SystemPath, int Index) : base(SystemPath, Index)
         {
             _points = new PointF[0];
             _systemPath = SystemPath;
@@ -32,12 +35,14 @@ namespace VisionLibrary
 
         public override void ReadSetting()
         {
-            IniFile ini = new IniFile(_systemPath + "\\ProjectionEdge.ini", true);
+            IniFile ini = new IniFile(_systemPath + "\\FindEdge.ini", true);
 
             //string section = "System" + _index.ToString();
             string section = "System";
-            _dir = ini.ReadInt(section, "Direction", 0);
+            _dir = ini.ReadInt(section, "Direction", 1);
             _interval = ini.ReadInt(section, "Interval", 1);
+            _formula = ini.ReadStr(section, "Formula", "R");
+            _saveImage = ini.ReadBool(section, "SaveImage", false);
 
             ini.FileClose();
             ini.Dispose();
@@ -54,7 +59,19 @@ namespace VisionLibrary
         /// <param name="SrcImage">輸入彩色影像</param>
         public override void Inspect(Image<Bgr, byte> SrcImage)
         {
-            Image<Gray, byte> gray = SrcImage.Convert<Gray, byte>();
+            string dir = _systemPath + "\\FindEdge";
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            if (_saveImage)
+                SrcImage.Save(dir + "\\Src.bmp");
+
+            Image<Gray, byte> gray = ImageArithmetic(SrcImage, _formula);
+
+            if (_saveImage)
+                gray.Save(dir + "\\_formula.bmp");
+
             double[] grayAvg = CalculateAverageGray(gray, _dir);
             int maxIndex = GetMaxGrayDifferenceIndex(grayAvg, _interval);
 
@@ -80,6 +97,10 @@ namespace VisionLibrary
         public int GetInterval()
         {
             return _interval;
+        }
+        public string GetFormula()
+        {
+            return _formula;
         }
 
         /// <summary>
@@ -159,6 +180,31 @@ namespace VisionLibrary
                 }
             }
             return maxDiffIndex;
+        }
+
+        public static Image<Gray, byte> ImageArithmetic(Image<Bgr, byte> input, string formula)
+        {
+            if (formula == "" || input.NumberOfChannels < 3)
+            {
+                return null;
+            }
+            // Define the context of our expression
+            ExpressionContext context = new ExpressionContext();
+            // Allow the expression to use all static public methods of System.Math
+            context.Imports.AddType(typeof(Math));
+            Image<Gray, byte>[] bgr = input.Split();
+            // Define an int variable
+            context.Variables["B"] = context.Variables["b"] = bgr[0];
+            context.Variables["G"] = context.Variables["g"] = bgr[1];
+            context.Variables["R"] = context.Variables["r"] = bgr[2];
+
+            // Create a dynamic expression that evaluates to an Object
+            IDynamicExpression eDynamic = context.CompileDynamic(formula);
+            // Evaluate the expressions
+            Image<Gray, byte> result = (Image<Gray, byte>)eDynamic.Evaluate();
+            ScratchProcessFile("ImageArithmetic.bmp", result.Mat);
+            return result;
+
         }
     }
 }

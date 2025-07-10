@@ -86,6 +86,85 @@ namespace VisionLibrary
             Rectangles = rectangles.ToArray();
             return result;
         }
+
+        public static PointF[] GetObjectCenter2(Image<Gray, byte> Src, int Threshold, int MinArea, int MaxArea, float W_H_Ratio, out Rectangle[] Rectangles, bool WhiteClass)
+        {
+            List<double[]> centers = new List<double[]>();
+            List<Rectangle> rectangles = new List<Rectangle>();
+            using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
+            {
+                // 在這版本請使用FindContours，早期版本有cvFindContours等等，在這版都無法使用，
+                // 由於這邊是要取得最外層的輪廓，所以第三個參數給 null，第四個參數則用 RetrType.External。
+                Mat threshold = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)).Mat;
+                CvInvoke.FindContours(threshold, contours, null, RetrType.List, ChainApproxMethod.ChainApproxNone);
+
+                int count = contours.Size;
+                VectorOfPoint GetContour = new VectorOfPoint();
+                for (int i = 0; i < count; i++)
+                {
+                    using (VectorOfPoint contour = contours[i])
+                    {
+
+                        
+
+                        // 1. 濾除面積過小或過大的輪廓
+                        double area = CvInvoke.ContourArea(contour);
+                        if (area < MaxArea && area > MinArea)
+                        {
+                            //  判斷是否為白色物件
+                            //Mat mask = new Mat(threshold.Size, DepthType.Cv8U, 1);
+                            //mask.SetTo(new MCvScalar(0));
+
+                            //// 將對應輪廓填成白色
+                            //CvInvoke.DrawContours(mask, contours, i, new MCvScalar(255), -1);  // -1 表示填滿
+
+                            //// 3. 計算該輪廓區域的平均灰階
+                            //MCvScalar mean = CvInvoke.Mean(threshold, mask);
+                            //if (mean.V0 > 128 != WhiteClass)
+                            //    continue;
+
+                            // 2. 計算輪廓的質心
+                            Moments m = CvInvoke.Moments(contour, true);
+
+                            PointF center = new PointF((float)(m.M10 / m.M00), (float)(m.M01 / m.M00));
+                            {
+                                double[] data = { area, center.X, center.Y };
+                                centers.Add(data);
+                                rectangles.Add(CvInvoke.BoundingRectangle(contour));
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i < centers.Count; i++)
+            {
+                float w = rectangles[i].Width;
+                float h = rectangles[i].Height;
+                float r = w / h;
+                if (w > h)
+                    r = h / w;
+
+                if (W_H_Ratio > r)
+                {
+                    centers.RemoveAt(i);
+                    rectangles.RemoveAt(i);
+                    i--;
+                }
+            }
+
+            // double[][] orderData = centers.OrderBy(x => x[0]).ToArray();
+            PointF[] result = new PointF[centers.Count];
+
+            for (int i = 0; i < result.Length; i++)
+            {
+                result[i].X = (float)centers[i][1];
+                result[i].Y = (float)centers[i][2];
+            }
+
+            Rectangles = rectangles.ToArray();
+            return result;
+        }
         public static PointF[] GetObjectCenter(Image<Gray, byte> Src, int Threshold, int MinArea, int MaxArea, bool WhiteClass)
         {
             List<double[]> centers = new List<double[]>();

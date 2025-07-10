@@ -97,7 +97,7 @@
     <Compile Include="Vision\Camera\CameraBaseDef.cs" />
     <Compile Include="Vision\Camera\LogitechDef.cs" />
     <Compile Include="Vision\ImageBase\FindCornerDef .cs" />
-    <Compile Include="Vision\ImageBase\ProjectionEdge.cs" />
+    <Compile Include="Vision\ImageBase\FindEdge.cs" />
     <Compile Include="Vision\ImageBase\FindObjectDef.cs" />
     <Compile Include="Vision\ImageBase\InpectBase.cs" />
     <Compile Include="Vision\ImageBase\JudgeObjectDef.cs" />

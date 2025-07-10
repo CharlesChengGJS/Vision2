@@ -12,6 +12,7 @@ using FileStreamLibrary;
 using System.Drawing;
 using System.IO;
 using static VisionLibrary.Process;
+using System.Security.Cryptography;
 
 namespace VisionLibrary
 {
@@ -29,6 +30,9 @@ namespace VisionLibrary
         private int _cornerIndex; 
         private float _ratio = 0.5f;
         private bool _isScale = false;
+        private int _openSize = 0; // 形態學操作的大小
+        private bool _white_class = false; // 是否白色物件
+
         public FindObjectDef(string SystemPath, int Index) : base(SystemPath, Index)
         {
             _points = new PointF[0];
@@ -48,6 +52,8 @@ namespace VisionLibrary
             _cornerIndex = ini.ReadInt(section, "CornerIndex", 1);
             _ratio = ini.ReadFloat(section, "Ratio", 0.5f);
             _isScale = ini.ReadBool(section, "Scale", true);
+            _openSize = ini.ReadInt(section, "OpenSize", 0);
+            _white_class = ini.ReadBool(section, "WhiteClass", false);
 
             ini.FileClose();
             ini.Dispose();
@@ -67,7 +73,15 @@ namespace VisionLibrary
                 CvInvoke.Resize(SrcImage, imageScale, new Size(0, 0), 0.5, 0.5, Inter.Linear);
                 
                 Image<Gray, byte> imageResult = ImageArithmetic(imageScale, _formula);
-                GetObjectCenter2(imageResult, _threshold, _minArea/4, _maxArea/4, _ratio, out _rectangles);
+                
+                
+                if(_openSize > 0)
+                {
+                    Mat element = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.ElementShape.Cross,new Size(_openSize, _openSize), new Point(-1, -1));
+                    CvInvoke.MorphologyEx(imageResult, imageResult, Emgu.CV.CvEnum.MorphOp.Open, element,new Point(-1, -1), 3, Emgu.CV.CvEnum.BorderType.Default, new MCvScalar(0, 0, 0));
+                }
+                
+                GetObjectCenter2(imageResult, _threshold, _minArea/4, _maxArea/4, _ratio, out _rectangles, _white_class);
                 imageResult.Dispose();
                 List<PointF> listP = new List<PointF>();
                 List<Rectangle> listR = new List<Rectangle>();
@@ -96,7 +110,7 @@ namespace VisionLibrary
                     Rectangle[] rectangles;
                     img.ROI = _rectangles[i];
                     imageResult = ImageArithmetic(img, _formula);
-                    PointF[] ps = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out rectangles);
+                    PointF[] ps = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out rectangles, _white_class);
                     imageResult.Dispose();
                     for(int j = 0; j < ps.Length; j++)
                     {
@@ -121,7 +135,7 @@ namespace VisionLibrary
             else
             {
                 Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula);
-                _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out _rectangles);
+                _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out _rectangles, _white_class);
             }
             
            
