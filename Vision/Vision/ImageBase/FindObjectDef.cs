@@ -85,9 +85,10 @@ namespace VisionLibrary
                 imageResult.Dispose();
                 List<PointF> listP = new List<PointF>();
                 List<Rectangle> listR = new List<Rectangle>();
-                img.ROI = Rectangle.Empty;
+                
                 for (int i = 0; i < _rectangles.Length; i++)
                 {
+                    img.ROI = Rectangle.Empty;
                     _rectangles[i].X = (int)(_rectangles[i].X * 2) - 2 + SrcImage.ROI.X;
                     _rectangles[i].Y = (int)(_rectangles[i].Y * 2) - 2 + SrcImage.ROI.Y;
 
@@ -114,11 +115,11 @@ namespace VisionLibrary
                     imageResult.Dispose();
                     for(int j = 0; j < ps.Length; j++)
                     {
-                        ps[i].X = ps[i].X + img.ROI.X - SrcImage.ROI.X;
-                        ps[i].Y = ps[i].Y + img.ROI.Y - SrcImage.ROI.Y;
+                        ps[j].X = ps[j].X + img.ROI.X - SrcImage.ROI.X;
+                        ps[j].Y = ps[j].Y + img.ROI.Y - SrcImage.ROI.Y;
 
-                        rectangles[i].X = rectangles[i].X + img.ROI.X - SrcImage.ROI.X;
-                        rectangles[i].Y = rectangles[i].Y + img.ROI.Y - SrcImage.ROI.Y;
+                        rectangles[j].X = rectangles[j].X + img.ROI.X - SrcImage.ROI.X;
+                        rectangles[j].Y = rectangles[j].Y + img.ROI.Y - SrcImage.ROI.Y;
                     }
 
                     
