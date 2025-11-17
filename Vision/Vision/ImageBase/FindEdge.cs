@@ -1,17 +1,18 @@
-﻿using System;
+﻿using Emgu.CV;
+using Emgu.CV.CvEnum;
+using Emgu.CV.Flann;
+using Emgu.CV.Structure;
+using FileStreamLibrary;
+using Flee.PublicTypes;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Flann;
-using Emgu.CV.Structure;
-using System.Drawing;
-using FileStreamLibrary;
-using System.IO;
-using Flee.PublicTypes;
+using static System.Net.Mime.MediaTypeNames;
 using static VisionLibrary.Process;
 
 namespace VisionLibrary
@@ -123,25 +124,38 @@ namespace VisionLibrary
                 case 1:
                     {
                         double[] result = new double[roiGray.Height];
+                        Mat reducedVector = new Mat();
+                        CvInvoke.Reduce(roiGray, reducedVector, ReduceDimension.SingleCol, ReduceType.ReduceAvg);
                         for (int y = 0; y < roiGray.Height; y++)
                         {
-                            int sum = 0;
-                            for (int x = 0; x < roiGray.Width; x++)
-                                sum += roiGray.Data[y, x, 0];
-                            result[y] = sum / (double)roiGray.Width;
+                            result[y] = double.Parse(reducedVector.GetData().GetValue(y,0).ToString());
                         }
+                            //for (int y = 0; y < roiGray.Height; y++)
+                            //{
+                            //    int sum = 0;
+                            //    for (int x = 0; x < roiGray.Width; x++)
+                            //        sum += roiGray.Data[y, x, 0];
+                            //    result[y] = sum / (double)roiGray.Width;
+                            //}
                         return result;
                     }
 
                 case 0:
                     {
                         double[] result = new double[roiGray.Width];
+                        //for (int x = 0; x < roiGray.Width; x++)
+                        //{
+                        //    int sum = 0;
+                        //    for (int y = 0; y < roiGray.Height; y++)
+                        //        sum += roiGray.Data[y, x, 0];
+                        //    result[x] = sum / (double)roiGray.Height;
+                        //}
+                     
+                        Mat reducedVector = new Mat();
+                        CvInvoke.Reduce(roiGray, reducedVector, ReduceDimension.SingleRow, ReduceType.ReduceAvg);
                         for (int x = 0; x < roiGray.Width; x++)
                         {
-                            int sum = 0;
-                            for (int y = 0; y < roiGray.Height; y++)
-                                sum += roiGray.Data[y, x, 0];
-                            result[x] = sum / (double)roiGray.Height;
+                            result[x] = double.Parse(reducedVector.GetData().GetValue(0, x).ToString());
                         }
                         return result;
                     }
