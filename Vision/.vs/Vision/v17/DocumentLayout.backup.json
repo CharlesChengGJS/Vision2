@@ -3,12 +3,16 @@
   "WorkspaceRootPath": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\findedge.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\findedge.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|d:\\work\\git\\organization\\gjs-vision2\\vision\\vision\\imagebase\\matchobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\matchobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\matchobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\matchobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\camera\\logitechdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\camera\\logitechdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\findedge.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\findedge.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\process\\process.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -19,7 +23,7 @@
       "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\judgeobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|d:\\work\\git\\organization\\gjs-vision2\\vision\\vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\findobjectdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -32,10 +36,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\imagebase\\inpectbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\imagebase\\inpectbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\camera\\logitechdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|solutionrelative:vision\\camera\\logitechdef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{B76D0236-F874-4B9A-8725-1E53BA16EE90}|Vision.csproj|D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\vision\\camera\\camerabasedef.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -53,7 +53,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
@@ -61,7 +61,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "Process.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\Process\\Process.cs",
               "RelativeDocumentMoniker": "Vision\\Process\\Process.cs",
@@ -69,8 +69,7 @@
               "RelativeToolTip": "Vision\\Process\\Process.cs",
               "ViewState": "AgIAAJ4AAAAAAAAAAAAQwKcAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-14T10:15:08.99Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-14T10:15:08.99Z"
             },
             {
               "$type": "Document",
@@ -86,20 +85,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "MatchObjectDef.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\MatchObjectDef.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\MatchObjectDef.cs",
               "ToolTip": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\MatchObjectDef.cs",
               "RelativeToolTip": "Vision\\ImageBase\\MatchObjectDef.cs",
-              "ViewState": "AgIAABoAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAACAAAAAAAAAAAADwvzUAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-07-01T07:15:26.7Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "FindEdge.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\FindEdge.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\FindEdge.cs",
@@ -107,12 +106,11 @@
               "RelativeToolTip": "Vision\\ImageBase\\FindEdge.cs",
               "ViewState": "AgIAAHMAAAAAAAAAAAAwwHcAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-12T02:12:38.307Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-06-12T02:12:38.307Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "FindCornerDef .cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\FindCornerDef .cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\FindCornerDef .cs",
@@ -124,7 +122,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "InpectBase.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\InpectBase.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\InpectBase.cs",
@@ -136,7 +134,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "FindObjectDef.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\FindObjectDef.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\FindObjectDef.cs",
@@ -144,12 +142,11 @@
               "RelativeToolTip": "Vision\\ImageBase\\FindObjectDef.cs",
               "ViewState": "AgIAAFAAAAAAAAAAAADwv2QAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-17T01:51:49.718Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-17T01:51:49.718Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "JudgeObjectDef.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\ImageBase\\JudgeObjectDef.cs",
               "RelativeDocumentMoniker": "Vision\\ImageBase\\JudgeObjectDef.cs",
@@ -157,12 +154,11 @@
               "RelativeToolTip": "Vision\\ImageBase\\JudgeObjectDef.cs",
               "ViewState": "AgIAACMAAAAAAAAAAAAAwFgAAACCAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-17T01:51:48.416Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-17T01:51:48.416Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "Vision",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision.csproj",
               "RelativeDocumentMoniker": "Vision.csproj",
@@ -185,7 +181,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 1,
               "Title": "LogitechDef.cs",
               "DocumentMoniker": "D:\\Work\\Git\\Organization\\GJS-Vision2\\Vision\\Vision\\Camera\\LogitechDef.cs",
               "RelativeDocumentMoniker": "Vision\\Camera\\LogitechDef.cs",
