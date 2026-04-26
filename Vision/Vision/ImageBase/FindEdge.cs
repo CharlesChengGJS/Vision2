@@ -124,38 +124,29 @@ namespace VisionLibrary
                 case 1:
                     {
                         double[] result = new double[roiGray.Height];
-                        Mat reducedVector = new Mat();
-                        CvInvoke.Reduce(roiGray, reducedVector, ReduceDimension.SingleCol, ReduceType.ReduceAvg);
-                        for (int y = 0; y < roiGray.Height; y++)
+                        using (Mat reducedVector = new Mat())
                         {
-                            result[y] = double.Parse(reducedVector.GetData().GetValue(y,0).ToString());
+                            CvInvoke.Reduce(roiGray, reducedVector, ReduceDimension.SingleCol, ReduceType.ReduceAvg);
+                            Array data = reducedVector.GetData();
+                            for (int y = 0; y < roiGray.Height; y++)
+                            {
+                                result[y] = double.Parse(data.GetValue(y, 0).ToString());
+                            }
                         }
-                            //for (int y = 0; y < roiGray.Height; y++)
-                            //{
-                            //    int sum = 0;
-                            //    for (int x = 0; x < roiGray.Width; x++)
-                            //        sum += roiGray.Data[y, x, 0];
-                            //    result[y] = sum / (double)roiGray.Width;
-                            //}
                         return result;
                     }
 
                 case 0:
                     {
                         double[] result = new double[roiGray.Width];
-                        //for (int x = 0; x < roiGray.Width; x++)
-                        //{
-                        //    int sum = 0;
-                        //    for (int y = 0; y < roiGray.Height; y++)
-                        //        sum += roiGray.Data[y, x, 0];
-                        //    result[x] = sum / (double)roiGray.Height;
-                        //}
-                     
-                        Mat reducedVector = new Mat();
-                        CvInvoke.Reduce(roiGray, reducedVector, ReduceDimension.SingleRow, ReduceType.ReduceAvg);
-                        for (int x = 0; x < roiGray.Width; x++)
+                        using (Mat reducedVector = new Mat())
                         {
-                            result[x] = double.Parse(reducedVector.GetData().GetValue(0, x).ToString());
+                            CvInvoke.Reduce(roiGray, reducedVector, ReduceDimension.SingleRow, ReduceType.ReduceAvg);
+                            Array data = reducedVector.GetData();
+                            for (int x = 0; x < roiGray.Width; x++)
+                            {
+                                result[x] = double.Parse(data.GetValue(0, x).ToString());
+                            }
                         }
                         return result;
                     }
@@ -202,23 +193,34 @@ namespace VisionLibrary
             {
                 return null;
             }
-            // Define the context of our expression
             ExpressionContext context = new ExpressionContext();
-            // Allow the expression to use all static public methods of System.Math
             context.Imports.AddType(typeof(Math));
             Image<Gray, byte>[] bgr = input.Split();
-            // Define an int variable
-            context.Variables["B"] = context.Variables["b"] = bgr[0];
-            context.Variables["G"] = context.Variables["g"] = bgr[1];
-            context.Variables["R"] = context.Variables["r"] = bgr[2];
+            Image<Gray, byte> result;
+            try
+            {
+                context.Variables["B"] = context.Variables["b"] = bgr[0];
+                context.Variables["G"] = context.Variables["g"] = bgr[1];
+                context.Variables["R"] = context.Variables["r"] = bgr[2];
 
-            // Create a dynamic expression that evaluates to an Object
-            IDynamicExpression eDynamic = context.CompileDynamic(formula);
-            // Evaluate the expressions
-            Image<Gray, byte> result = (Image<Gray, byte>)eDynamic.Evaluate();
+                IDynamicExpression eDynamic = context.CompileDynamic(formula);
+                Image<Gray, byte> evalResult = (Image<Gray, byte>)eDynamic.Evaluate();
+
+                // 若公式是單一通道（例如 "R"），Flee 會直接回傳通道引用；複製一份才能安全釋放 bgr。
+                if (evalResult == bgr[0] || evalResult == bgr[1] || evalResult == bgr[2])
+                    result = evalResult.Copy();
+                else
+                    result = evalResult;
+            }
+            finally
+            {
+                for (int i = 0; i < bgr.Length; i++)
+                {
+                    if (bgr[i] != null) bgr[i].Dispose();
+                }
+            }
             ScratchProcessFile("ImageArithmetic.bmp", result.Mat);
             return result;
-
         }
     }
 }

@@ -271,8 +271,7 @@ namespace VisionLibrary.Camera
 
         public override string GetSerialNumberOrMonikerString()
         {
-
-            if (this == null)
+            if (_VideoDevices == null || _CameraIndex < 0 || _CameraIndex >= _VideoDevices.Count)
                 return string.Empty;
 
             string monikerString = _VideoDevices[_CameraIndex].MonikerString;
@@ -296,25 +295,39 @@ namespace VisionLibrary.Camera
 
         private int GetComportFromMonikerString(string completeMonikerString)
         {
-            RegistryKey localKey;
-            if (Environment.Is64BitOperatingSystem)
-                localKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            else
-                localKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
+            try
+            {
+                RegistryKey localKey = Environment.Is64BitOperatingSystem
+                    ? RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
+                    : RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32);
 
-            string[] keys = completeMonikerString.Split('#');
-            if(keys.Length < 2)
+                string[] keys = completeMonikerString.Split('#');
+                if (keys.Length < 3)
+                    return -1;
+                string path = keys[1] + @"\" + keys[2];
+
+                using (RegistryKey subKey = localKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USB\" + path))
+                {
+                    if (subKey == null)
+                        return -1;
+                    object raw = subKey.GetValue("LocationInformation");
+                    if (raw == null)
+                        return -1;
+                    string[] parts = raw.ToString().Split('.');
+                    if (parts.Length < 4)
+                        return -1;
+                    return Convert.ToInt32(parts[3]);
+                }
+            }
+            catch
+            {
                 return -1;
-            string path = keys[1] + @"\" + keys[2];
-
-            var value = localKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USB\" + path).GetValue("LocationInformation").ToString();
-            int comport = Convert.ToInt32(value.Split('.')[3]);
-            return comport;
+            }
         }
 
         public string GetCameraName()
         {
-            if (this == null)
+            if (_VideoDevices == null || _CameraIndex < 0 || _CameraIndex >= _VideoDevices.Count)
                 return string.Empty;
             return _VideoDevices[_CameraIndex].Name;
         }

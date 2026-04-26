@@ -74,7 +74,9 @@ namespace VisionLibrary
 
             if (_scaleRatio != 1 && _scaleRatio > 0)
             {
-                imageResult = imageResult.Resize(_scaleRatio, Inter.Nearest);
+                Image<Gray, byte> resized = imageResult.Resize(_scaleRatio, Inter.Nearest);
+                imageResult.Dispose();
+                imageResult = resized;
                 if (_saveImage)
                 {
                     string savePath = Path.Combine(Application.StartupPath, "JudgeObject" + _index.ToString(), "imageResult_Resize" + ".jpg");
@@ -83,17 +85,26 @@ namespace VisionLibrary
             }
             if (_doCanny > 0)
             {
-                imageResult = imageResult.Canny(_cannyThreshold1, _cannyThreshold2);
+                Image<Gray, byte> canny = imageResult.Canny(_cannyThreshold1, _cannyThreshold2);
+                imageResult.Dispose();
+                imageResult = canny;
                 if (_saveImage)
                 {
                     string savePath = Path.Combine(Application.StartupPath, "JudgeObject" + _index.ToString(), "imageResult_Canny" + ".jpg");
                     imageResult.Save(savePath);
                 }
             }
-            Gray value = imageResult.GetAverage();
-            _judgeValue = value.Intensity;
-            bool whiteFlag = value.Intensity > _threshold;
-            _isCorrect = (whiteFlag == (_whiteObject > 0));
+            try
+            {
+                Gray value = imageResult.GetAverage();
+                _judgeValue = value.Intensity;
+                bool whiteFlag = value.Intensity > _threshold;
+                _isCorrect = (whiteFlag == (_whiteObject > 0));
+            }
+            finally
+            {
+                imageResult.Dispose();
+            }
         }
 
         public override bool IsCorrect()

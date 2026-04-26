@@ -27,15 +27,12 @@ namespace VisionLibrary
         {
             List<double[]> centers = new List<double[]>();
             List<Rectangle> rectangles = new List<Rectangle>();
+            using (Image<Gray, byte> thresholdImg = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)))
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             {
-                // 在這版本請使用FindContours，早期版本有cvFindContours等等，在這版都無法使用，
-                // 由於這邊是要取得最外層的輪廓，所以第三個參數給 null，第四個參數則用 RetrType.External。
-                Mat threshold = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)).Mat;
-                CvInvoke.FindContours(threshold, contours, null, RetrType.List, ChainApproxMethod.ChainApproxNone);
+                CvInvoke.FindContours(thresholdImg.Mat, contours, null, RetrType.List, ChainApproxMethod.ChainApproxNone);
 
                 int count = contours.Size;
-                VectorOfPoint GetContour = new VectorOfPoint();
                 for (int i = 0; i < count; i++)
                 {
                     using (VectorOfPoint contour = contours[i])
@@ -91,15 +88,12 @@ namespace VisionLibrary
         {
             List<double[]> centers = new List<double[]>();
             List<Rectangle> rectangles = new List<Rectangle>();
+            using (Image<Gray, byte> thresholdImg = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)))
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             {
-                // 在這版本請使用FindContours，早期版本有cvFindContours等等，在這版都無法使用，
-                // 由於這邊是要取得最外層的輪廓，所以第三個參數給 null，第四個參數則用 RetrType.External。
-                Mat threshold = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)).Mat;
-                CvInvoke.FindContours(threshold, contours, null, RetrType.List, ChainApproxMethod.ChainApproxNone);
+                CvInvoke.FindContours(thresholdImg.Mat, contours, null, RetrType.List, ChainApproxMethod.ChainApproxNone);
 
                 int count = contours.Size;
-                VectorOfPoint GetContour = new VectorOfPoint();
                 for (int i = 0; i < count; i++)
                 {
                     using (VectorOfPoint contour = contours[i])
@@ -168,15 +162,12 @@ namespace VisionLibrary
         public static PointF[] GetObjectCenter(Image<Gray, byte> Src, int Threshold, int MinArea, int MaxArea, bool WhiteClass)
         {
             List<double[]> centers = new List<double[]>();
+            using (Image<Gray, byte> thresholdImg = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)))
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             {
-                // 在這版本請使用FindContours，早期版本有cvFindContours等等，在這版都無法使用，
-                // 由於這邊是要取得最外層的輪廓，所以第三個參數給 null，第四個參數則用 RetrType.External。
-                Mat threshold = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)).Mat;
-                CvInvoke.FindContours(threshold, contours, null, RetrType.List, ChainApproxMethod.ChainApproxNone);
+                CvInvoke.FindContours(thresholdImg.Mat, contours, null, RetrType.List, ChainApproxMethod.ChainApproxNone);
 
                 int count = contours.Size;
-                VectorOfPoint GetContour = new VectorOfPoint();
                 for (int i = 0; i < count; i++)
                 {
                     using (VectorOfPoint contour = contours[i])
@@ -232,15 +223,13 @@ namespace VisionLibrary
         {
             List<PointF> centers = new List<PointF>();
             List<Rectangle> rectangles = new List<Rectangle>();
+            using (Image<Gray, byte> thresholdImg = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)))
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             {
-                // 在這版本請使用FindContours，早期版本有cvFindContours等等，在這版都無法使用，
-                // 由於這邊是要取得最外層的輪廓，所以第三個參數給 null，第四個參數則用 RetrType.External。
-                Mat threshold = Src.ThresholdBinary(new Gray(Threshold), new Gray(255)).Mat;
+                Mat threshold = thresholdImg.Mat;
                 CvInvoke.FindContours(threshold, contours, null, RetrType.List, ChainApproxMethod.ChainApproxNone);
 
                 int count = contours.Size;
-                VectorOfPoint GetContour = new VectorOfPoint();
                 for (int i = 0; i < count; i++)
                 {
                     using (VectorOfPoint contour = contours[i])
@@ -248,23 +237,25 @@ namespace VisionLibrary
                         double area = CvInvoke.ContourArea(contour);
                         if (area < MaxArea && area > MinArea)
                         {
-                            area = CvInvoke.ContourArea(contour);
                             Moments m = CvInvoke.Moments(contour, true);
 
                             PointF center = new PointF((float)(m.M10 / m.M00), (float)(m.M01 / m.M00));
 
-                            Mat mask = new Mat(Src.Size, DepthType.Cv8U, 1);
-                            CvInvoke.FillPoly(mask, contours[i], new MCvScalar(255));
-                            double average_value = CvInvoke.Mean(threshold, mask).V0;
-                            if (WhiteClass && average_value >= 254)
+                            using (Mat mask = new Mat(Src.Size, DepthType.Cv8U, 1))
                             {
-                                centers.Add(center);
-                                rectangles.Add(CvInvoke.BoundingRectangle(contour));
-                            }
-                            if (!WhiteClass && average_value < 254)
-                            {
-                                centers.Add(center);
-                                rectangles.Add(CvInvoke.BoundingRectangle(contour));
+                                mask.SetTo(new MCvScalar(0));
+                                CvInvoke.FillPoly(mask, contour, new MCvScalar(255));
+                                double average_value = CvInvoke.Mean(threshold, mask).V0;
+                                if (WhiteClass && average_value >= 254)
+                                {
+                                    centers.Add(center);
+                                    rectangles.Add(CvInvoke.BoundingRectangle(contour));
+                                }
+                                if (!WhiteClass && average_value < 254)
+                                {
+                                    centers.Add(center);
+                                    rectangles.Add(CvInvoke.BoundingRectangle(contour));
+                                }
                             }
                         }
                     }
@@ -681,74 +672,83 @@ namespace VisionLibrary
         }
         public static void GetMaxTriangle(Mat src, double lineLengthThreshold, out VectorOfPointF triangle)
         {
+            triangle = new VectorOfPointF();
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             {
-
                 CvInvoke.FindContours(src, contours, null, RetrType.External, ChainApproxMethod.ChainApproxNone);
 
-                int count = contours.Size;
                 double area = 0;
-                triangle = new VectorOfPointF();
-                VectorOfPoint maxContour = new VectorOfPoint();
+                int maxIndex = -1;
                 for (int i = 0; i < contours.Size; i++)
                 {
                     using (VectorOfPoint contour = contours[i])
                     {
-                        if (CvInvoke.ContourArea(contour) > area)
+                        double a = CvInvoke.ContourArea(contour);
+                        if (a > area)
                         {
-                            area = CvInvoke.ContourArea(contour);
-                            maxContour = contour;
+                            area = a;
+                            maxIndex = i;
                         }
                     }
                 }
 
-                Mat canvas = src.Clone();
-                canvas.SetTo(new MCvScalar(0));
-                CvInvoke.CvtColor(canvas, canvas, ColorConversion.Gray2Bgr);
-                if (EnableScratchProcessFile)
-                {
-                    for (int i = 0; i < maxContour.Size; i++)
-                        CvInvoke.Circle(canvas, maxContour[i], 0, new MCvScalar(255,255,255));
-                    CvInvoke.Imwrite("max_contour.bmp", canvas);
-                }
+                if (maxIndex < 0)
+                    return;
 
-                VectorOfPoint approx_cotour = new VectorOfPoint();
-                VectorOfPoint result_contour = new VectorOfPoint();
-                CvInvoke.ApproxPolyDP(maxContour, approx_cotour, 1, true);
-                List<LineSegment2D> lines = new List<LineSegment2D>();
-                for (int i = 0; i < approx_cotour.Size - 1; i++)
+                using (Mat canvas = src.Clone())
+                using (VectorOfPoint maxContour = contours[maxIndex])
+                using (VectorOfPoint approx_cotour = new VectorOfPoint())
+                using (VectorOfPoint result_contour = new VectorOfPoint())
                 {
-                    LineSegment2D line = new LineSegment2D();
-                    line = new LineSegment2D(approx_cotour[i], approx_cotour[i + 1]);
-                    lines.Add(line);
-                }
-                lines.Add(new LineSegment2D(approx_cotour[0], approx_cotour[approx_cotour.Size - 1]));
-
-                if (EnableScratchProcessFile)
-                {
-                    MCvScalar[] rgb = new MCvScalar[] { new MCvScalar(255, 0, 0), new MCvScalar(0, 255, 0), new MCvScalar(0, 0, 255) };
-                    for (int i = 0; i < lines.Count; i++)
-                        CvInvoke.Line(canvas, lines[i].P1, lines[i].P2, rgb[i%3]);
-                    CvInvoke.Imwrite("approx_lines.bmp", canvas);
-                }
-
-                for (int i = 0; i < lines.Count; i++)
-                {
-                    if (lines[i].Length >= lineLengthThreshold)
+                    canvas.SetTo(new MCvScalar(0));
+                    CvInvoke.CvtColor(canvas, canvas, ColorConversion.Gray2Bgr);
+                    if (EnableScratchProcessFile)
                     {
-                        result_contour.Push(new Point[] { lines[i].P1 });
-                        result_contour.Push(new Point[] { lines[i].P2 });
+                        for (int i = 0; i < maxContour.Size; i++)
+                            CvInvoke.Circle(canvas, maxContour[i], 0, new MCvScalar(255, 255, 255));
+                        CvInvoke.Imwrite("max_contour.bmp", canvas);
                     }
-                }
 
-                CvInvoke.MinEnclosingTriangle(result_contour, triangle);
+                    CvInvoke.ApproxPolyDP(maxContour, approx_cotour, 1, true);
+                    if (approx_cotour.Size < 2)
+                        return;
 
-                if (EnableScratchProcessFile)
-                {
-                    CvInvoke.Line(canvas, Point.Round(triangle[0]), Point.Round(triangle[1]), new MCvScalar(125,125,125));
-                    CvInvoke.Line(canvas, Point.Round(triangle[1]), Point.Round(triangle[2]), new MCvScalar(125, 125, 125));
-                    CvInvoke.Line(canvas, Point.Round(triangle[2]), Point.Round(triangle[0]), new MCvScalar(125, 125, 125));
-                    CvInvoke.Imwrite("triangle.bmp", canvas);
+                    List<LineSegment2D> lines = new List<LineSegment2D>();
+                    for (int i = 0; i < approx_cotour.Size - 1; i++)
+                    {
+                        lines.Add(new LineSegment2D(approx_cotour[i], approx_cotour[i + 1]));
+                    }
+                    lines.Add(new LineSegment2D(approx_cotour[0], approx_cotour[approx_cotour.Size - 1]));
+
+                    if (EnableScratchProcessFile)
+                    {
+                        MCvScalar[] rgb = new MCvScalar[] { new MCvScalar(255, 0, 0), new MCvScalar(0, 255, 0), new MCvScalar(0, 0, 255) };
+                        for (int i = 0; i < lines.Count; i++)
+                            CvInvoke.Line(canvas, lines[i].P1, lines[i].P2, rgb[i % 3]);
+                        CvInvoke.Imwrite("approx_lines.bmp", canvas);
+                    }
+
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        if (lines[i].Length >= lineLengthThreshold)
+                        {
+                            result_contour.Push(new Point[] { lines[i].P1 });
+                            result_contour.Push(new Point[] { lines[i].P2 });
+                        }
+                    }
+
+                    if (result_contour.Size < 3)
+                        return;
+
+                    CvInvoke.MinEnclosingTriangle(result_contour, triangle);
+
+                    if (EnableScratchProcessFile && triangle.Size >= 3)
+                    {
+                        CvInvoke.Line(canvas, Point.Round(triangle[0]), Point.Round(triangle[1]), new MCvScalar(125, 125, 125));
+                        CvInvoke.Line(canvas, Point.Round(triangle[1]), Point.Round(triangle[2]), new MCvScalar(125, 125, 125));
+                        CvInvoke.Line(canvas, Point.Round(triangle[2]), Point.Round(triangle[0]), new MCvScalar(125, 125, 125));
+                        CvInvoke.Imwrite("triangle.bmp", canvas);
+                    }
                 }
             }
         }
@@ -838,18 +838,26 @@ namespace VisionLibrary
             _Temp8U = null;
             _EdgeX = null;
             _EdgeY = null;
+            _LightThresholdImage = null;
         }
 
         public void Dispose()
         {
-            if (_Temp16S != null)
+            if (_Temp16S != null) { _Temp16S.Dispose(); _Temp16S = null; }
+            if (_Temp8U != null) { _Temp8U.Dispose(); _Temp8U = null; }
+            if (_EdgeX != null) { _EdgeX.Dispose(); _EdgeX = null; }
+            if (_EdgeY != null) { _EdgeY.Dispose(); _EdgeY = null; }
+            if (_LightThresholdImage != null) { _LightThresholdImage.Dispose(); _LightThresholdImage = null; }
+        }
+
+        private static void EnsureMat(ref Mat target, Size size, Emgu.CV.CvEnum.DepthType depth, int channels)
+        {
+            if (target != null)
             {
-                _Temp16S.Dispose();
-                _Temp8U.Dispose();
-                _EdgeX.Dispose();
-                _EdgeY.Dispose();
-                _LightThresholdImage.Dispose();
+                if (target.Width == size.Width && target.Height == size.Height) return;
+                target.Dispose();
             }
+            target = new Mat(size, depth, channels);
         }
         public Point GetCorner(IInputOutputArray inputImage, DetectionDirection direction, int houghLinesThrehold = 0, int houghLinesMinLen = 50, int minlineGap = 5, double Xv = 0.3, double Yv = 0.3, int antiBrightNoise = 210)
         {
@@ -886,157 +894,153 @@ namespace VisionLibrary
             #endregion
 
             Mat inputMat = inputImage.GetInputArray().GetMat();
-            Mat src = inputMat.Clone();
-
-            Process.ScratchProcessFile("_Src.bmp", src);
-
-            if (_Temp16S == null || _Temp16S.Width != inputMat.Width || _Temp16S.Height != inputMat.Height)
-                _Temp16S = new Mat(new Size(inputMat.Width, inputMat.Height), Emgu.CV.CvEnum.DepthType.Cv16S, 1);
-
-            if (_Temp8U == null || _Temp8U.Width != inputMat.Width || _Temp8U.Height != inputMat.Height)
-                _Temp8U = new Mat(new Size(inputMat.Width, inputMat.Height), Emgu.CV.CvEnum.DepthType.Cv8U, 1);
-
-            if (_EdgeX == null || _EdgeX.Width != inputMat.Width || _EdgeX.Height != inputMat.Height)
-                _EdgeX = new Mat(new Size(inputMat.Width, inputMat.Height), Emgu.CV.CvEnum.DepthType.Cv8U, 1);
-
-            if (_EdgeY == null || _EdgeY.Width != inputMat.Width || _EdgeY.Height != inputMat.Height)
-                _EdgeY = new Mat(new Size(inputMat.Width, inputMat.Height), Emgu.CV.CvEnum.DepthType.Cv8U, 1);
-
-            if (_LightThresholdImage == null || _LightThresholdImage.Width != inputMat.Width || _LightThresholdImage.Height != inputMat.Height)
-                _LightThresholdImage = new Mat(new Size(inputMat.Width, inputMat.Height), Emgu.CV.CvEnum.DepthType.Cv8U, 1);
-
-            CvInvoke.Threshold(src, _LightThresholdImage, antiBrightNoise, 255, Emgu.CV.CvEnum.ThresholdType.BinaryInv);
-
-            Process.ScratchProcessFile("Threshold.bmp", _LightThresholdImage);
-
-            Mat element = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.ElementShape.Cross,
-                    new Size(3, 3), new Point(-1, -1));
-            CvInvoke.Erode(_LightThresholdImage, _LightThresholdImage, element, new Point(-1, -1), 1,
-                    Emgu.CV.CvEnum.BorderType.Default, new MCvScalar(0, 0, 0));
-
-            Process.ScratchProcessFile("LightThreshold.bmp", _LightThresholdImage);
-
-
-            double xv = Xv * directionX;
-            float[,] k =
-            {   {(float)xv, 0, (float)-xv},
-                {(float)xv, 0, (float)-xv},
-                {(float)xv, 0, (float)-xv},
-                {(float)xv, 0, (float)-xv},
-                {(float)xv, 0, (float)-xv},
-                {(float)xv, 0, (float)-xv},
-                {(float)xv, 0, (float)-xv},
-                {(float)xv, 0, (float)-xv},
-                {(float)xv, 0, (float)-xv}};
-
-            ConvolutionKernelF kernel = new ConvolutionKernelF(k);
-
-            CvInvoke.Filter2D(src, _Temp16S, kernel, new Point(-1, -1));
-
-            CvInvoke.ConvertScaleAbs(_Temp16S, _EdgeX, 1, 128);
-            Process.ScratchProcessFile("EdgeX.bmp", _EdgeX);
-
-            CvInvoke.Threshold(_EdgeX, _EdgeX, 192, 255, Emgu.CV.CvEnum.ThresholdType.Binary);
-            Process.ScratchProcessFile("EdgeXThreshold.bmp", _EdgeX);
-
-            CvInvoke.BitwiseAnd(_EdgeX, _LightThresholdImage, _EdgeX);
-
-            LineSegment2D[] linesX = CvInvoke.HoughLinesP(
-                _EdgeX, 1,
-                Math.PI / 180 / 2,
-                houghLinesThrehold,
-                houghLinesMinLen,
-                0);
-
-            double yv = Yv * directionY;
-            float[,] kY =
-            {   {(float)yv, (float)yv, (float)yv, (float)yv, (float)yv, (float)yv, (float)yv, (float)yv, (float)yv},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0},
-                {(float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv},
-            };
-
-            ConvolutionKernelF kernelY = new ConvolutionKernelF(kY);
-
-            CvInvoke.Filter2D(src, _Temp16S, kernelY, new Point(-1, -1));
-            CvInvoke.ConvertScaleAbs(_Temp16S, _EdgeY, 1, 128);
-            Process.ScratchProcessFile("EdgeY.bmp", _EdgeY);
-
-            CvInvoke.Threshold(_EdgeY, _EdgeY, 192, 255, Emgu.CV.CvEnum.ThresholdType.Binary);
-            Process.ScratchProcessFile("EdgeYThreshold.bmp", _EdgeY);
-
-            CvInvoke.BitwiseAnd(_EdgeY, _LightThresholdImage, _EdgeY);
-
-            LineSegment2D[] linesY = CvInvoke.HoughLinesP(
-                _EdgeY, 1,
-                Math.PI / 180 / 2,
-                houghLinesThrehold,
-                houghLinesMinLen,
-                0);
-            LineSegment2D[] totolLine = new LineSegment2D[linesX.Length + linesY.Length];
-
-            for (int i = 0; i < linesX.Length; i++)
-                totolLine[i] = linesX[i];
-
-            for (int i = 0; i < linesY.Length; i++)
-                totolLine[i + linesX.Length] = linesY[i];
-
-
-            LineSegment2D[] mergedLines = MergeLines((LineSegment2D[])totolLine.Clone(), minlineGap);
-            List<LineSegment2D[]> linePairList;
-            Point[] corners = GetRightAngleCorners(mergedLines, 5, directionX, directionY, out linePairList);
-            Point insideCorner = FindInsideCorner(inputMat, linePairList, corners, directionX, directionY);
-
-            #region SaveImage
-            #region Draw
-            #region Draw edge by before merge
-            Mat paint1 = inputMat.Clone();
-            for (int i = 0; i < totolLine.Length; i++)
+            using (Mat src = inputMat.Clone())
             {
-                if (Math.Abs(totolLine[i].Direction.X) > Math.Abs(totolLine[i].Direction.Y))
-                    CvInvoke.Line(paint1, totolLine[i].P1, totolLine[i].P2, new MCvScalar(255, 0, 0), 1, Emgu.CV.CvEnum.LineType.AntiAlias); //LineType.AntiAlias表示抗锯齿
-                else
-                    CvInvoke.Line(paint1, totolLine[i].P1, totolLine[i].P2, new MCvScalar(0, 0, 255), 1, Emgu.CV.CvEnum.LineType.AntiAlias); //LineType.AntiAlias表示抗锯齿
+                Process.ScratchProcessFile("_Src.bmp", src);
+
+                Size matSize = new Size(inputMat.Width, inputMat.Height);
+                EnsureMat(ref _Temp16S, matSize, Emgu.CV.CvEnum.DepthType.Cv16S, 1);
+                EnsureMat(ref _Temp8U, matSize, Emgu.CV.CvEnum.DepthType.Cv8U, 1);
+                EnsureMat(ref _EdgeX, matSize, Emgu.CV.CvEnum.DepthType.Cv8U, 1);
+                EnsureMat(ref _EdgeY, matSize, Emgu.CV.CvEnum.DepthType.Cv8U, 1);
+                EnsureMat(ref _LightThresholdImage, matSize, Emgu.CV.CvEnum.DepthType.Cv8U, 1);
+
+                CvInvoke.Threshold(src, _LightThresholdImage, antiBrightNoise, 255, Emgu.CV.CvEnum.ThresholdType.BinaryInv);
+
+                Process.ScratchProcessFile("Threshold.bmp", _LightThresholdImage);
+
+                using (Mat element = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.ElementShape.Cross,
+                        new Size(3, 3), new Point(-1, -1)))
+                {
+                    CvInvoke.Erode(_LightThresholdImage, _LightThresholdImage, element, new Point(-1, -1), 1,
+                            Emgu.CV.CvEnum.BorderType.Default, new MCvScalar(0, 0, 0));
+                }
+
+                Process.ScratchProcessFile("LightThreshold.bmp", _LightThresholdImage);
+
+
+                double xv = Xv * directionX;
+                float[,] k =
+                {   {(float)xv, 0, (float)-xv},
+                    {(float)xv, 0, (float)-xv},
+                    {(float)xv, 0, (float)-xv},
+                    {(float)xv, 0, (float)-xv},
+                    {(float)xv, 0, (float)-xv},
+                    {(float)xv, 0, (float)-xv},
+                    {(float)xv, 0, (float)-xv},
+                    {(float)xv, 0, (float)-xv},
+                    {(float)xv, 0, (float)-xv}};
+
+                LineSegment2D[] linesX;
+                using (ConvolutionKernelF kernel = new ConvolutionKernelF(k))
+                {
+                    CvInvoke.Filter2D(src, _Temp16S, kernel, new Point(-1, -1));
+                }
+
+                CvInvoke.ConvertScaleAbs(_Temp16S, _EdgeX, 1, 128);
+                Process.ScratchProcessFile("EdgeX.bmp", _EdgeX);
+
+                CvInvoke.Threshold(_EdgeX, _EdgeX, 192, 255, Emgu.CV.CvEnum.ThresholdType.Binary);
+                Process.ScratchProcessFile("EdgeXThreshold.bmp", _EdgeX);
+
+                CvInvoke.BitwiseAnd(_EdgeX, _LightThresholdImage, _EdgeX);
+
+                linesX = CvInvoke.HoughLinesP(
+                    _EdgeX, 1,
+                    Math.PI / 180 / 2,
+                    houghLinesThrehold,
+                    houghLinesMinLen,
+                    0);
+
+                double yv = Yv * directionY;
+                float[,] kY =
+                {   {(float)yv, (float)yv, (float)yv, (float)yv, (float)yv, (float)yv, (float)yv, (float)yv, (float)yv},
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                    {(float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv, (float)-yv},
+                };
+
+                using (ConvolutionKernelF kernelY = new ConvolutionKernelF(kY))
+                {
+                    CvInvoke.Filter2D(src, _Temp16S, kernelY, new Point(-1, -1));
+                }
+                CvInvoke.ConvertScaleAbs(_Temp16S, _EdgeY, 1, 128);
+                Process.ScratchProcessFile("EdgeY.bmp", _EdgeY);
+
+                CvInvoke.Threshold(_EdgeY, _EdgeY, 192, 255, Emgu.CV.CvEnum.ThresholdType.Binary);
+                Process.ScratchProcessFile("EdgeYThreshold.bmp", _EdgeY);
+
+                CvInvoke.BitwiseAnd(_EdgeY, _LightThresholdImage, _EdgeY);
+
+                LineSegment2D[] linesY = CvInvoke.HoughLinesP(
+                    _EdgeY, 1,
+                    Math.PI / 180 / 2,
+                    houghLinesThrehold,
+                    houghLinesMinLen,
+                    0);
+                LineSegment2D[] totolLine = new LineSegment2D[linesX.Length + linesY.Length];
+
+                for (int i = 0; i < linesX.Length; i++)
+                    totolLine[i] = linesX[i];
+
+                for (int i = 0; i < linesY.Length; i++)
+                    totolLine[i + linesX.Length] = linesY[i];
+
+
+                LineSegment2D[] mergedLines = MergeLines((LineSegment2D[])totolLine.Clone(), minlineGap);
+                List<LineSegment2D[]> linePairList;
+                Point[] corners = GetRightAngleCorners(mergedLines, 5, directionX, directionY, out linePairList);
+                Point insideCorner = FindInsideCorner(inputMat, linePairList, corners, directionX, directionY);
+
+                if (Process.EnableScratchProcessFile)
+                {
+                    using (Mat paint1 = inputMat.Clone())
+                    {
+                        for (int i = 0; i < totolLine.Length; i++)
+                        {
+                            if (Math.Abs(totolLine[i].Direction.X) > Math.Abs(totolLine[i].Direction.Y))
+                                CvInvoke.Line(paint1, totolLine[i].P1, totolLine[i].P2, new MCvScalar(255, 0, 0), 1, Emgu.CV.CvEnum.LineType.AntiAlias);
+                            else
+                                CvInvoke.Line(paint1, totolLine[i].P1, totolLine[i].P2, new MCvScalar(0, 0, 255), 1, Emgu.CV.CvEnum.LineType.AntiAlias);
+                        }
+                        Process.ScratchProcessFile("BeforeMerge.bmp", paint1);
+                    }
+
+                    using (Mat paint = inputMat.Clone())
+                    {
+                        for (int i = 0; i < mergedLines.Length; i++)
+                        {
+                            if (Math.Abs(mergedLines[i].Direction.X) > Math.Abs(mergedLines[i].Direction.Y))
+                                CvInvoke.Line(paint, mergedLines[i].P1, mergedLines[i].P2, new MCvScalar(255, 0, 0), 1, Emgu.CV.CvEnum.LineType.AntiAlias);
+                            else
+                                CvInvoke.Line(paint, mergedLines[i].P1, mergedLines[i].P2, new MCvScalar(0, 0, 255), 1, Emgu.CV.CvEnum.LineType.AntiAlias);
+                        }
+                        for (int i = 0; i < corners.Length; i++)
+                        {
+                            CvInvoke.Circle(paint, corners[i], 5, new MCvScalar(0, 0, 255));
+                        }
+                        CvInvoke.Circle(paint, insideCorner, 5, new MCvScalar(255, 0, 0));
+                        Process.ScratchProcessFile("Paint.bmp", paint);
+                    }
+
+                    using (Mat Imgresult = inputMat.Clone())
+                    {
+                        int CrossSize = 50;
+                        Point[] Cross = new Point[]
+                        {
+                            new Point(insideCorner.X - CrossSize, insideCorner.Y),
+                            new Point(insideCorner.X + CrossSize, insideCorner.Y),
+                            new Point(insideCorner.X , insideCorner.Y - CrossSize),
+                            new Point(insideCorner.X , insideCorner.Y + CrossSize),
+                        };
+
+                        CvInvoke.Line(Imgresult, Cross[0], Cross[1], new MCvScalar(0, 0, 255));
+                        CvInvoke.Line(Imgresult, Cross[2], Cross[3], new MCvScalar(0, 0, 255));
+                        Process.ScratchProcessFile("Result.bmp", Imgresult);
+                    }
+                }
+
+                return insideCorner;
             }
-            Process.ScratchProcessFile("BeforeMerge.bmp", paint1);
-            #endregion
-
-            #region Draw Corners
-            Mat paint = inputMat.Clone();
-            for (int i = 0; i < mergedLines.Length; i++)
-            {
-                if (Math.Abs(mergedLines[i].Direction.X) > Math.Abs(mergedLines[i].Direction.Y))
-                    CvInvoke.Line(paint, mergedLines[i].P1, mergedLines[i].P2, new MCvScalar(255, 0, 0), 1, Emgu.CV.CvEnum.LineType.AntiAlias); //LineType.AntiAlias表示抗锯齿
-                else
-                    CvInvoke.Line(paint, mergedLines[i].P1, mergedLines[i].P2, new MCvScalar(0, 0, 255), 1, Emgu.CV.CvEnum.LineType.AntiAlias); //LineType.AntiAlias表示抗锯齿
-            }
-            for (int i = 0; i < corners.Length; i++)
-            {
-                CvInvoke.Circle(paint, corners[i], 5, new MCvScalar(0, 0, 255));
-            }
-            CvInvoke.Circle(paint, insideCorner, 5, new MCvScalar(255, 0, 0));
-            Process.ScratchProcessFile("Paint.bmp", paint);
-            #endregion
-            #endregion
-
-            #region Draw Cross
-            Mat Imgresult = inputMat.Clone();
-            int CrossSize = 50;
-            Point[] Cross = new Point[]
-            {
-                    new Point(insideCorner.X - CrossSize, insideCorner.Y),
-                    new Point(insideCorner.X + CrossSize, insideCorner.Y),
-                    new Point(insideCorner.X , insideCorner.Y - CrossSize),
-                    new Point(insideCorner.X , insideCorner.Y + CrossSize),
-            };
-
-            CvInvoke.Line(Imgresult, Cross[0], Cross[1], new MCvScalar(0, 0, 255));
-            CvInvoke.Line(Imgresult, Cross[2], Cross[3], new MCvScalar(0, 0, 255));
-            #endregion
-
-            Process.ScratchProcessFile("Result.bmp", Imgresult);
-            #endregion
-
-            return insideCorner;
         }
 
         private static Point FindInsideCorner(Mat inputImage, List<LineSegment2D[]> linePairList, Point[] corners, int directionX, int directionY)

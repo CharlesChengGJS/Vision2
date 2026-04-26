@@ -67,8 +67,10 @@ namespace VisionLibrary
       
         public override void Inspect(Image<Bgr, byte> SrcImage)
         {
-            Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula);
-            _points[0] = _cornerDetector.GetCorner(imageResult, _direction, _houghLinesThrehold,_houghLinesMinLen,_minlineGap,_xv,_yv,_antiBrightNoise);
+            using (Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula))
+            {
+                _points[0] = _cornerDetector.GetCorner(imageResult, _direction, _houghLinesThrehold, _houghLinesMinLen, _minlineGap, _xv, _yv, _antiBrightNoise);
+            }
         }
     }
 }

@@ -69,30 +69,32 @@ namespace VisionLibrary
             if (_isScale)
             {
                 Image<Bgr, byte> imageScale = new Image<Bgr, byte>(SrcImage.Width/2, SrcImage.Height/2);
-                Image<Bgr, byte> img = SrcImage.Clone(); 
+                Image<Bgr, byte> img = SrcImage.Clone();
                 CvInvoke.Resize(SrcImage, imageScale, new Size(0, 0), 0.5, 0.5, Inter.Linear);
-                
+
                 Image<Gray, byte> imageResult = ImageArithmetic(imageScale, _formula);
-                
-                
+
+
                 if(_openSize > 0)
                 {
-                    Mat element = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.ElementShape.Cross,new Size(_openSize, _openSize), new Point(-1, -1));
-                    CvInvoke.MorphologyEx(imageResult, imageResult, Emgu.CV.CvEnum.MorphOp.Open, element,new Point(-1, -1), 3, Emgu.CV.CvEnum.BorderType.Default, new MCvScalar(0, 0, 0));
+                    using (Mat element = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.ElementShape.Cross, new Size(_openSize, _openSize), new Point(-1, -1)))
+                    {
+                        CvInvoke.MorphologyEx(imageResult, imageResult, Emgu.CV.CvEnum.MorphOp.Open, element, new Point(-1, -1), 3, Emgu.CV.CvEnum.BorderType.Default, new MCvScalar(0, 0, 0));
+                    }
                 }
-                
+
                 GetObjectCenter2(imageResult, _threshold, _minArea/4, _maxArea/4, _ratio, out _rectangles, _white_class);
                 imageResult.Dispose();
                 List<PointF> listP = new List<PointF>();
                 List<Rectangle> listR = new List<Rectangle>();
-                
+
                 for (int i = 0; i < _rectangles.Length; i++)
                 {
                     img.ROI = Rectangle.Empty;
                     _rectangles[i].X = (int)(_rectangles[i].X * 2) - 2 + SrcImage.ROI.X;
                     _rectangles[i].Y = (int)(_rectangles[i].Y * 2) - 2 + SrcImage.ROI.Y;
 
-                  
+
                     _rectangles[i].Width = (int)(_rectangles[i].Width * 2) + 4;
                     _rectangles[i].Height = (int)(_rectangles[i].Height * 2 + 4);
                     if(_rectangles[i].X < 0)
@@ -122,21 +124,23 @@ namespace VisionLibrary
                         rectangles[j].Y = rectangles[j].Y + img.ROI.Y - SrcImage.ROI.Y;
                     }
 
-                    
+
                     listR.AddRange(rectangles);
                     listP.AddRange(ps);
                 }
 
                 img.Dispose();
                 imageScale.Dispose();
-                
+
                 _points = listP.ToArray();
                 _rectangles = listR.ToArray();
             }
             else
             {
-                Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula);
-                _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out _rectangles, _white_class);
+                using (Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula))
+                {
+                    _points = GetObjectCenter2(imageResult, _threshold, _minArea, _maxArea, _ratio, out _rectangles, _white_class);
+                }
             }
             
            

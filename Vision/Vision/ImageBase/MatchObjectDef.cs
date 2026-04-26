@@ -71,17 +71,19 @@ namespace VisionLibrary
 
         public void LearnModel(Image<Bgr, byte> Src)
         {
-            
-            Image<Gray, byte> imageResult = ImageArithmetic(Src, _formula);
-            //_model.Dispose();
-            _model = new Image<Gray, byte>(imageResult.Width, imageResult.Height);
-            imageResult.CopyTo(_model);
+            using (Image<Gray, byte> imageResult = ImageArithmetic(Src, _formula))
+            {
+                if (_model != null) _model.Dispose();
+                _model = new Image<Gray, byte>(imageResult.Width, imageResult.Height);
+                imageResult.CopyTo(_model);
+            }
             if (_scale != 1)
             {
-                _model = _model.Resize(_scale, Inter.Linear);
+                Image<Gray, byte> scaled = _model.Resize(_scale, Inter.Linear);
+                _model.Dispose();
+                _model = scaled;
             }
             _model._SmoothGaussian(5);
-            
         }
 
         public void SaveModel()
@@ -366,15 +368,17 @@ namespace VisionLibrary
             */
 
             float denom = (P1.X - P2.X) * (P1.X - P3.X) * (P2.X - P3.X); // can't be zero since X is from piXel locations.
+            const float EPS = 1e-7f;
+            if (Math.Abs(denom) < EPS)
+                return; // 三點 X 共線，保留預設 P2
             float A = (P3.X * (P2.Y - P1.Y) + P2.X * (P1.Y - P3.Y) + P1.X * (P3.Y - P2.Y)) / denom;
             float B = ((P3.X * P3.X) * (P1.Y - P2.Y) + (P2.X * P2.X) * (P3.Y - P1.Y) + (P1.X * P1.X) * (P2.Y - P3.Y)) / denom;
             float C = (P2.X * P3.X * (P2.X - P3.X) * P1.Y + P3.X * P1.X * (P3.X - P1.X) * P2.Y + P1.X * P2.X * (P1.X - P2.X) * P3.Y) / denom;
 
+            // Y = A * X^2 + B * x + C
 
-
-            // Y = A * X^2 + B * x + C 
-
-            //now find the center
+            if (Math.Abs(A) < EPS)
+                return; // 退化為直線，無頂點
 
             float xv = -B / (2 * A);
             float yv = C - (B * B) / (4 * A);
@@ -387,8 +391,10 @@ namespace VisionLibrary
 
         public override void Inspect(Image<Bgr, byte> SrcImage)
         {
-            Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula);
-            _points = Match(imageResult);
+            using (Image<Gray, byte> imageResult = ImageArithmetic(SrcImage, _formula))
+            {
+                _points = Match(imageResult);
+            }
         }
 
 
@@ -396,25 +402,27 @@ namespace VisionLibrary
         {
             Image<Gray, float> ret;
             if (_scale == 1)
-            { 
+            {
                 ret = cSrcImage.MatchTemplate(_model, TemplateMatchingType.CcoeffNormed);
             }
             else
             {
-                ret = cSrcImage.Resize(_scale, Inter.Linear).MatchTemplate(_model, TemplateMatchingType.CcoeffNormed);
+                using (Image<Gray, byte> resized = cSrcImage.Resize(_scale, Inter.Linear))
+                {
+                    ret = resized.MatchTemplate(_model, TemplateMatchingType.CcoeffNormed);
+                }
             }
-            double fMin = 0, fMax = 0;
-            Point stMaxp = new Point(0, 0);
-            Point stMinp = new Point(0, 0);
-            CvInvoke.MinMaxLoc(ret, ref fMin, ref fMax, ref stMinp, ref stMaxp);
-            PointF[] result;
-            if (fMax < _score)
-            { 
-                return new PointF[0];
-            }
-            else
+            try
             {
-                result = new PointF[1];
+                double fMin = 0, fMax = 0;
+                Point stMaxp = new Point(0, 0);
+                Point stMinp = new Point(0, 0);
+                CvInvoke.MinMaxLoc(ret, ref fMin, ref fMax, ref stMinp, ref stMaxp);
+                if (fMax < _score)
+                {
+                    return new PointF[0];
+                }
+                PointF[] result = new PointF[1];
                 MinMaxLocSubPix(stMaxp, ret.Mat, ref result[0]);
                 result[0].X += _model.Width / 2;
                 result[0].Y += _model.Height / 2;
@@ -422,10 +430,12 @@ namespace VisionLibrary
                 result[0].X = result[0].X / _scale;
                 result[0].Y = result[0].Y / _scale;
 
+                return result;
+            }
+            finally
+            {
                 ret.Dispose();
             }
-
-            return result;
         }
     }
 }
