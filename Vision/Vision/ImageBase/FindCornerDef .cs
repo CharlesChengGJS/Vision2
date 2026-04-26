@@ -15,7 +15,7 @@ using static VisionLibrary.Process;
 
 namespace VisionLibrary
 {
-    public class FindCornerDef : InpectBase
+    public class FindCornerDef : InspectBase
     {
 
         private CornerDetectorDef _cornerDetector;

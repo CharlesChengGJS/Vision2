@@ -16,7 +16,7 @@ using System.Security.Cryptography;
 
 namespace VisionLibrary
 {
-    public class FindObjectDef : InpectBase
+    public class FindObjectDef : InspectBase
     {
 
         private PointF[] _points;

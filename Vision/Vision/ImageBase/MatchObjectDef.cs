@@ -15,7 +15,7 @@ using static VisionLibrary.Process;
 
 namespace VisionLibrary
 {
-    public class MatchObjectDef : InpectBase
+    public class MatchObjectDef : InspectBase
     {
 
         private Image<Gray, byte> _model;

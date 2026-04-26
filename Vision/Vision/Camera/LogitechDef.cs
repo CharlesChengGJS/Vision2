@@ -1,50 +1,53 @@
-﻿using Emgu.CV;
-using Emgu.CV.Structure;
 using System;
+using System.Runtime.InteropServices;
 using System.Threading;
-using System.Collections;
-using AForge.Video;
 using AForge.Video.DirectShow;
 using Microsoft.Win32;
+using OcvCapture = OpenCvSharp.VideoCapture;
+using OcvCaptureApi = OpenCvSharp.VideoCaptureAPIs;
+using OcvCaptureProp = OpenCvSharp.VideoCaptureProperties;
+using OcvMat = OpenCvSharp.Mat;
+using OcvMatType = OpenCvSharp.MatType;
 
 namespace VisionLibrary.Camera
 {
     public class LogitechDef : CameraBaseDef
     {
+        // DSHOW 直接控制曝光/白平衡（與 capture graph 平行存在，不靠 OpenCvSharp）
         DirectShowLib.IAMCameraControl _CamControl;
         DirectShowLib.IAMVideoProcAmp _CamParmControl;
+        object _CamControlSourceObj;
 
+        // 列舉裝置：保留 AForge.FilterInfoCollection（純 DSHOW 列舉，與 Emgu.CV 無關）
         readonly FilterInfoCollection _VideoDevices;
-        readonly VideoCaptureDevice _VideoSource;
-        readonly VideoCapabilities[] _VideoCapabilities;
 
+        // OpenCvSharp + DSHOW 抓圖
+        OcvCapture _Capture;
+        OcvMat _LatestMat;
+        Thread _GrabThread;
+        volatile bool _RunGrabThread;
 
-        private Image<Bgr, byte> _ImgFrame;
-        private Mat _MatFrame;
-        private AutoResetEvent _GrabDoneEvent;
-        private object _CopyLocker = new object();
-        private bool _IsLive;
+        readonly object _CopyLocker = new object();
+        bool _IsLive;
         readonly int _CameraIndex;
-        readonly string ErrorCode;
+        string ErrorCode;
         readonly double Resolution;
-        private int _AliveTick;
-        Thread _UpdateFrameThread;
-        private bool _GrabbingLastestImage;
+      
+        int _FrameWidth;
+        int _FrameHeight;
 
         public LogitechDef(string MonikerString, double fResolution)
         {
             _IsLive = true;
             _CameraIndex = -1;
-            _CopyLocker = new object();
+            ErrorCode = string.Empty;
+            Resolution = fResolution;
 
-            _GrabDoneEvent = new AutoResetEvent(false);
             try
             {
-                ErrorCode = string.Empty;
-                Resolution = fResolution;
-
                 _VideoDevices = new FilterInfoCollection(FilterCategory.VideoInputDevice);
 
+                // 以 USB 實體連接位置（COM port 號）排序選擇 — 與舊行為相同
                 for (int index = 0; index < _VideoDevices.Count; index++)
                 {
                     int comport = GetComportFromMonikerString(_VideoDevices[index].MonikerString);
@@ -52,39 +55,44 @@ namespace VisionLibrary.Camera
                     if (MonikerString.ToUpper() == comportString)
                     {
                         _CameraIndex = index;
-                        _VideoSource = new VideoCaptureDevice(_VideoDevices[index].MonikerString);
+                        break;
                     }
                 }
+
                 if (_CameraIndex < 0)
                 {
                     ErrorCode = "Camera initial fail.";
                     return;
                 }
-                _VideoCapabilities = _VideoSource.VideoCapabilities;
 
-                VideoCapabilities cap = _VideoCapabilities[0];
-                foreach (var item in _VideoCapabilities)
-                {   //選FPS30以上，最高解析度
-                    if(item.AverageFrameRate >= 30)
-                        if (item.FrameSize.Width * item.FrameSize.Height >= cap.FrameSize.Width * cap.FrameSize.Height)
-                            cap = item;
-                }
-                _VideoSource.VideoResolution = cap;
-                _VideoSource.NewFrame += new NewFrameEventHandler(NewFrame);
-
-
-                var sourceObj = FilterInfo.CreateFilter(_VideoDevices[_CameraIndex].MonikerString);
-                var sourceBase = (DirectShowLib.IBaseFilter)sourceObj;
+                // 取得 DSHOW 控制介面（IAMCameraControl/IAMVideoProcAmp 與 capture graph 共存）
+                _CamControlSourceObj = FilterInfo.CreateFilter(_VideoDevices[_CameraIndex].MonikerString);
+                var sourceBase = (DirectShowLib.IBaseFilter)_CamControlSourceObj;
                 _CamControl = (DirectShowLib.IAMCameraControl)sourceBase;
                 _CamParmControl = (DirectShowLib.IAMVideoProcAmp)sourceBase;
 
                 _CamControl.Set(DirectShowLib.CameraControlProperty.Exposure, 0, DirectShowLib.CameraControlFlags.Manual);
                 _CamParmControl.Set(DirectShowLib.VideoProcAmpProperty.WhiteBalance, 5000, DirectShowLib.VideoProcAmpFlags.Manual);
 
+                // 用 OpenCvSharp + DSHOW 開啟相機；index 與 FilterInfoCollection 一致（同一份 DSHOW 列舉）
+                _Capture = new OcvCapture(_CameraIndex, OcvCaptureApi.DSHOW);
+                if (!_Capture.IsOpened())
+                {
+                    ErrorCode = "Camera initial fail.";
+                    return;
+                }
 
-                _VideoSource.Start();
+                ChooseBestResolution();
+                _FrameWidth = (int)_Capture.Get(OcvCaptureProp.FrameWidth);
+                _FrameHeight = (int)_Capture.Get(OcvCaptureProp.FrameHeight);
+
+                _LatestMat = new OcvMat();
+
+                _RunGrabThread = true;
+                _GrabThread = new Thread(GrabLoop) { IsBackground = true, Name = "LogitechDef.GrabLoop" };
+                _GrabThread.Start();
+
                 Thread.Sleep(1000);
-
             }
             catch
             {
@@ -93,117 +101,142 @@ namespace VisionLibrary.Camera
             }
         }
 
-
-        public override bool IsAlive()
+        // OpenCvSharp 沒有列舉裝置支援解析度的 API；用候選清單嘗試 Set，挑能達成且 FPS>=30 的最大畫素
+        private void ChooseBestResolution()
         {
-            if (!_IsLive)
-                return false;
-
-            //if (Math.Abs(Environment.TickCount - _aliveTick) > 3000)
-            //    return false;
-
-            return true;
-
-        }
-
-        public override bool IsRunning()
-        {
-            lock (_CopyLocker)
+            int[][] candidates =
             {
-                if (_VideoSource != null)
-                    return _VideoSource.IsRunning;
-                else
-                    return true;
-            }
-        }
+                new[] { 3840, 2160 }, new[] { 2592, 1944 }, new[] { 2048, 1536 },
+                new[] { 1920, 1080 }, new[] { 1600, 1200 }, new[] { 1280, 960 },
+                new[] { 1280, 720 },  new[] { 1024, 768 },  new[] { 640, 480 }
+            };
 
-        public override void Restart()
-        {
-            lock (_CopyLocker)
+            int bestPx = 0;
+            int bestW = 0, bestH = 0;
+            foreach (var c in candidates)
             {
-                _VideoSource.Start();
-            }
-        }
-
-        public override double GetResolution()
-        {
-            return Resolution;
-        }
-        public static int GetCameraQuantities()
-        {
-            return new FilterInfoCollection(FilterCategory.VideoInputDevice).Count;
-        }
-
-        public override bool IniSuccess(ref String sErrorCode)
-        {
-            if (ErrorCode.Length > 0)
-            {
-                sErrorCode = ErrorCode;
-                return false;
-            }
-
-            return true;
-        }
-
-        private void NewFrame(object sender, NewFrameEventArgs e)
-        {
-            if (_GrabbingLastestImage)
-            {
-                if (_ImgFrame == null)
-                    _ImgFrame = new Image<Bgr, byte>(e.Frame.Width, e.Frame.Height);
-
-                _AliveTick = Environment.TickCount;
-                _ImgFrame = e.Frame.ToImage<Bgr, byte>();
-                _GrabDoneEvent.Set();
-                _GrabbingLastestImage = false;
-            }
-            else
-                e.Frame.Dispose();
-        }
-
-        public override void Dispose()
-        {
-            if (_VideoSource == null)
-                return;
-            _VideoSource.Stop();
-            _VideoSource.WaitForStop();
-            if (_ImgFrame != null)
-                _ImgFrame.Dispose();
-
-            if (_MatFrame != null)
-                _MatFrame.Dispose();
-        }
-
-
-        public override void CopyImage(IInputOutputArray cOutputArray)
-        {
-            try
-            {
-                _GrabDoneEvent.Reset();
-                _GrabbingLastestImage = true;
-                if (_GrabDoneEvent.WaitOne(100))
+                _Capture.Set(OcvCaptureProp.FrameWidth, c[0]);
+                _Capture.Set(OcvCaptureProp.FrameHeight, c[1]);
+                int actualW = (int)_Capture.Get(OcvCaptureProp.FrameWidth);
+                int actualH = (int)_Capture.Get(OcvCaptureProp.FrameHeight);
+                int actualFps = (int)_Capture.Get(OcvCaptureProp.Fps);
+                int px = actualW * actualH;
+                if (actualFps >= 30 && px > bestPx)
                 {
+                    bestPx = px;
+                    bestW = actualW;
+                    bestH = actualH;
+                }
+            }
+            if (bestW > 0)
+            {
+                _Capture.Set(OcvCaptureProp.FrameWidth, bestW);
+                _Capture.Set(OcvCaptureProp.FrameHeight, bestH);
+            }
+        }
+
+        // 背景緒：純粹持續 Grab() 推進 DSHOW 內部 frame buffer，不做 Retrieve
+        private void GrabLoop()
+        {
+            while (_RunGrabThread)
+            {
+                if (!_IsLive || _Capture == null || !_Capture.IsOpened())
+                {
+                    Thread.Sleep(20);
+                    continue;
+                }
+                try
+                {
+                    
                     lock (_CopyLocker)
                     {
-                        if (_ImgFrame != null)
-                            _ImgFrame.CopyTo((CvArray<byte>)cOutputArray);
+                        _Capture.Grab();
                     }
+                    Thread.Sleep(5);
                 }
-                _GrabbingLastestImage = false;
-            }
-            catch
-            {
-                //throw;
+                catch
+                {
+                    Thread.Sleep(20);
+                }
             }
         }
 
-        public override void UndistortImage(IInputOutputArray cOutputArray, IInputOutputArray CameraMatrix, IInputOutputArray DistCoeffs)
+        public override void CopyImage(Emgu.CV.IInputOutputArray cOutputArray)
         {
             try
             {
                 lock (_CopyLocker)
                 {
-                    CvInvoke.Undistort(_MatFrame, cOutputArray, CameraMatrix, DistCoeffs);
+                    if (_Capture == null || !_Capture.IsOpened()) return;
+                    _Capture.Retrieve(_LatestMat);
+                    CopyLatestTo(cOutputArray);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        // 把 OpenCvSharp.Mat 透過原生 memcpy 寫進呼叫端的 buffer。
+        // cOutputArray 的具體型別由基底類別決定（呼叫端目前是 Image<Bgr,byte> / Mat），這裡只取 DataPointer 不做任何影像處理。
+        private void CopyLatestTo(Emgu.CV.IInputOutputArray cOutputArray)
+        {
+            CopyOcvMatTo(_LatestMat, cOutputArray);
+        }
+
+        private static void CopyOcvMatTo(OcvMat src, Emgu.CV.IInputOutputArray cOutputArray)
+        {
+            if (src == null || src.Empty()) return;
+
+            IntPtr dstPtr;
+            int dstW, dstH, dstCh;
+
+            if (cOutputArray is Emgu.CV.Image<Emgu.CV.Structure.Bgr, byte> img)
+            {
+                dstPtr = img.Mat.DataPointer;
+                dstW = img.Width;
+                dstH = img.Height;
+                dstCh = img.NumberOfChannels;
+            }
+            else if (cOutputArray is Emgu.CV.Mat outMat)
+            {
+                dstPtr = outMat.DataPointer;
+                dstW = outMat.Cols;
+                dstH = outMat.Rows;
+                dstCh = outMat.NumberOfChannels;
+            }
+            else
+            {
+                return;
+            }
+
+            if (dstW != src.Cols || dstH != src.Rows || dstCh != src.Channels())
+                return;
+
+            long bytes = (long)src.Total() * src.ElemSize();
+            if (bytes > 0)
+                CopyMemory(dstPtr, src.Data, (UIntPtr)bytes);
+        }
+
+        [DllImport("kernel32.dll", EntryPoint = "RtlMoveMemory", SetLastError = false)]
+        private static extern void CopyMemory(IntPtr dest, IntPtr src, UIntPtr count);
+
+        public override void UndistortImage(Emgu.CV.IInputOutputArray cOutputArray, Emgu.CV.IInputOutputArray CameraMatrix, Emgu.CV.IInputOutputArray DistCoeffs)
+        {
+            try
+            {
+                lock (_CopyLocker)
+                {
+                    if (_LatestMat == null || _LatestMat.Empty()) return;
+
+                    using (OcvMat camMat = WrapEmguMatAsOcv(CameraMatrix))
+                    using (OcvMat distMat = WrapEmguMatAsOcv(DistCoeffs))
+                    using (OcvMat dst = new OcvMat())
+                    {
+                        if (camMat == null || distMat == null) return;
+                        OpenCvSharp.Cv2.Undistort(_LatestMat, dst, camMat, distMat);
+                        CopyOcvMatTo(dst, cOutputArray);
+                    }
                 }
             }
             catch
@@ -212,28 +245,118 @@ namespace VisionLibrary.Camera
             }
         }
 
+        // 把 Emgu.CV.Mat 的 DataPointer 包成共享記憶體的 OpenCvSharp.Mat（不複製、不擁有資料）
+        private static OcvMat WrapEmguMatAsOcv(Emgu.CV.IInputOutputArray arr)
+        {
+            Emgu.CV.Mat m = arr as Emgu.CV.Mat;
+            if (m == null) return null;
+            OcvMatType type = OcvMatType.MakeType(EmguDepthToOcv(m.Depth), m.NumberOfChannels);
+            return OcvMat.FromPixelData(m.Rows, m.Cols, type, m.DataPointer);
+        }
+
+        private static int EmguDepthToOcv(Emgu.CV.CvEnum.DepthType depth)
+        {
+            switch (depth)
+            {
+                case Emgu.CV.CvEnum.DepthType.Cv8U:  return OcvMatType.CV_8U;
+                case Emgu.CV.CvEnum.DepthType.Cv8S:  return OcvMatType.CV_8S;
+                case Emgu.CV.CvEnum.DepthType.Cv16U: return OcvMatType.CV_16U;
+                case Emgu.CV.CvEnum.DepthType.Cv16S: return OcvMatType.CV_16S;
+                case Emgu.CV.CvEnum.DepthType.Cv32S: return OcvMatType.CV_32S;
+                case Emgu.CV.CvEnum.DepthType.Cv32F: return OcvMatType.CV_32F;
+                case Emgu.CV.CvEnum.DepthType.Cv64F: return OcvMatType.CV_64F;
+                default: throw new NotSupportedException("Unsupported Emgu.CV depth: " + depth);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _RunGrabThread = false;
+            try
+            {
+                if (_GrabThread != null && _GrabThread.IsAlive)
+                    _GrabThread.Join(2000);
+            }
+            catch { }
+
+            if (_Capture != null)
+            {
+                try { _Capture.Release(); } catch { }
+                _Capture.Dispose();
+                _Capture = null;
+            }
+            if (_LatestMat != null)
+            {
+                _LatestMat.Dispose();
+                _LatestMat = null;
+            }
+            if (_CamControlSourceObj != null)
+            {
+                try { Marshal.ReleaseComObject(_CamControlSourceObj); } catch { }
+                _CamControlSourceObj = null;
+                _CamControl = null;
+                _CamParmControl = null;
+            }
+        }
+
+        public override bool IsAlive()
+        {
+            return _IsLive;
+        }
+
+        public override bool IsRunning()
+        {
+            lock (_CopyLocker)
+            {
+                return _Capture != null && _Capture.IsOpened() && _RunGrabThread;
+            }
+        }
+
+        public override void Restart()
+        {
+            lock (_CopyLocker)
+            {
+                if (_Capture != null && !_Capture.IsOpened())
+                {
+                    _Capture.Open(_CameraIndex, OcvCaptureApi.DSHOW);
+                }
+            }
+        }
+
+        public override double GetResolution()
+        {
+            return Resolution;
+        }
+
+        public static int GetCameraQuantities()
+        {
+            return new FilterInfoCollection(FilterCategory.VideoInputDevice).Count;
+        }
+
+        public override bool IniSuccess(ref string sErrorCode)
+        {
+            if (ErrorCode.Length > 0)
+            {
+                sErrorCode = ErrorCode;
+                return false;
+            }
+            return true;
+        }
+
         public override void SetLive(bool bIsLive)
         {
             lock (_CopyLocker)
             {
                 _IsLive = bIsLive;
-                if (bIsLive)
-                    _VideoSource.Start();
-                else
-                    _VideoSource.SignalToStop();
             }
         }
-
-
 
         public override int GetHeight()
         {
             lock (_CopyLocker)
             {
-                if (_VideoSource == null)
-                    return 0;
-                else
-                    return _VideoSource.VideoResolution.FrameSize.Height;
+                if (_Capture == null) return 0;
+                return _FrameHeight;
             }
         }
 
@@ -241,17 +364,16 @@ namespace VisionLibrary.Camera
         {
             lock (_CopyLocker)
             {
-                if (_VideoSource == null)
-                    return 0;
-                else
-                    return _VideoSource.VideoResolution.FrameSize.Width;
+                if (_Capture == null) return 0;
+                return _FrameWidth;
             }
         }
+
         public override PropertyInfo GetExposureTimeRange()
         {
             lock (_CopyLocker)
             {
-                if (_VideoSource == null)
+                if (_Capture == null || _CamControl == null)
                     return new PropertyInfo();
                 PropertyInfo stRange = new PropertyInfo();
                 _CamControl.Get(DirectShowLib.CameraControlProperty.Exposure, out stRange.iValue, out DirectShowLib.CameraControlFlags eFlag);
@@ -264,7 +386,7 @@ namespace VisionLibrary.Camera
         {
             lock (_CopyLocker)
             {
-                if (_VideoSource != null)
+                if (_CamControl != null)
                     _CamControl.Set(DirectShowLib.CameraControlProperty.Exposure, iValue, DirectShowLib.CameraControlFlags.Manual);
             }
         }
@@ -280,8 +402,7 @@ namespace VisionLibrary.Camera
             string monikerStringAfterSplit = string.Empty;
             for (int i = 0; i < monikerString.Length; i++)
             {
-                if (monikerString[i] == '&')
-                    s++;
+                if (monikerString[i] == '&') s++;
                 if (s == 3 && monikerString[i] != '&')
                     monikerStringAfterSplit += monikerString[i];
             }
@@ -290,7 +411,7 @@ namespace VisionLibrary.Camera
 
         public static string[] GetAllMonikerString()
         {
-            return new string[]{ "" };
+            return new string[] { "" };
         }
 
         private int GetComportFromMonikerString(string completeMonikerString)
@@ -334,10 +455,12 @@ namespace VisionLibrary.Camera
 
         public override void OpenPropertyPage()
         {
-            //VideoSource.DisplayPropertyPage(IntPtr.Zero);
+            try
+            {
+                if (_Capture != null && _Capture.IsOpened())
+                    _Capture.Set(OcvCaptureProp.Settings, 1);
+            }
+            catch { }
         }
-
-       
-
     }
 }

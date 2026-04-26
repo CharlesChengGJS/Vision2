@@ -17,7 +17,7 @@ using static VisionLibrary.Process;
 
 namespace VisionLibrary
 {
-    public class FindEdge : InpectBase
+    public class FindEdge : InspectBase
     {
         /// <summary>灰階最大變化點/// </summary>
         private PointF[] _points;

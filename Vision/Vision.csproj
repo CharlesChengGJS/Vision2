@@ -62,6 +62,26 @@
     <Reference Include="IniFile">
       <HintPath>GJSDLL\IniFile.dll</HintPath>
     </Reference>
+    <Reference Include="OpenCvSharp">
+      <HintPath>packages\OpenCvSharp4.4.13.0.20260330\lib\netstandard2.0\OpenCvSharp.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
@@ -99,7 +119,7 @@
     <Compile Include="Vision\ImageBase\FindCornerDef .cs" />
     <Compile Include="Vision\ImageBase\FindEdge.cs" />
     <Compile Include="Vision\ImageBase\FindObjectDef.cs" />
-    <Compile Include="Vision\ImageBase\InpectBase.cs" />
+    <Compile Include="Vision\ImageBase\InspectBase.cs" />
     <Compile Include="Vision\ImageBase\JudgeObjectDef.cs" />
     <Compile Include="Vision\ImageBase\MatchObjectDef.cs" />
     <Compile Include="Vision\Process\Process.cs" />
@@ -110,10 +130,12 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="packages\Emgu.CV.runtime.windows.4.4.0.4099\build\Emgu.CV.runtime.windows.targets" Condition="Exists('packages\Emgu.CV.runtime.windows.4.4.0.4099\build\Emgu.CV.runtime.windows.targets')" />
+  <Import Project="packages\OpenCvSharp4.runtime.win.4.13.0.20260302\build\netstandard\OpenCvSharp4.runtime.win.props" Condition="Exists('packages\OpenCvSharp4.runtime.win.4.13.0.20260302\build\netstandard\OpenCvSharp4.runtime.win.props')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('packages\Emgu.CV.runtime.windows.4.4.0.4099\build\Emgu.CV.runtime.windows.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Emgu.CV.runtime.windows.4.4.0.4099\build\Emgu.CV.runtime.windows.targets'))" />
+    <Error Condition="!Exists('packages\OpenCvSharp4.runtime.win.4.13.0.20260302\build\netstandard\OpenCvSharp4.runtime.win.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\OpenCvSharp4.runtime.win.4.13.0.20260302\build\netstandard\OpenCvSharp4.runtime.win.props'))" />
   </Target>
 </Project>

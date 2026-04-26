@@ -15,7 +15,7 @@ using static VisionLibrary.Process;
 
 namespace VisionLibrary
 {
-    public class JudgeObjectDef : InpectBase
+    public class JudgeObjectDef : InspectBase
     {
 
         private int _whiteObject;

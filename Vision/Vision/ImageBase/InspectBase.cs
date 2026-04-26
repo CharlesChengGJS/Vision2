@@ -11,11 +11,11 @@ using Emgu.CV.Structure;
 
 namespace VisionLibrary
 {
-    public abstract class InpectBase : IDisposable
+    public abstract class InspectBase : IDisposable
     {
         protected string _systemPath;
         protected int _index;
-        protected InpectBase(string SystemPath, int Index)
+        protected InspectBase(string SystemPath, int Index)
         {
             _systemPath = SystemPath;
             _index = Index;

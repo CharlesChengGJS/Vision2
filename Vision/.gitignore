@@ -32,6 +32,8 @@ _ReSharper*/
 *.DotSettings.user
 
 # NuGet (keep packages.config, ignore restored packages)
+packages/
+.nuget/
 *.nupkg
 *.snupkg
 project.lock.json
