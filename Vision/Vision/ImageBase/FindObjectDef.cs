@@ -33,7 +33,7 @@ namespace VisionLibrary
         private int _openSize = 0; // 形態學操作的大小
         private int _erodeSize = 0; // 形態學操作的大小
         private bool _white_class = false; // 是否白色物件
-        private bool _rangeResult = false; // 是否輸出範圍結果
+        public bool RangeResult = false; // 是否輸出範圍結果
         private int _rangeLength = 0; // 範圍結果的長度
         private bool _rangeResultIsX = false; // 是否輸出範圍結果
 
@@ -59,7 +59,7 @@ namespace VisionLibrary
             _openSize = ini.ReadInt(section, "OpenSize", 0);
             _erodeSize = ini.ReadInt(section, "ErodeSize", 0);
             _white_class = ini.ReadBool(section, "WhiteClass", false);
-            _rangeResult = ini.ReadBool(section, "RangeResult", false);
+            RangeResult = ini.ReadBool(section, "RangeResult", false);
             _rangeResultIsX = ini.ReadBool(section, "RangeResultIsX", true);
             _rangeLength = ini.ReadInt(section, "RangeLength", 30);
             ini.FileClose();
@@ -146,7 +146,7 @@ namespace VisionLibrary
                 img.Dispose();
                 imageScale.Dispose();
 
-                if (_rangeResult)
+                if (RangeResult)
                 {
                     List<PointF> listP1 = new List<PointF>();
                     for (int i =0; i < listR.Count; i++)
