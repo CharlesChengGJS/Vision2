@@ -31,7 +31,11 @@ namespace VisionLibrary
         private float _ratio = 0.5f;
         private bool _isScale = false;
         private int _openSize = 0; // 形態學操作的大小
+        private int _erodeSize = 0; // 形態學操作的大小
         private bool _white_class = false; // 是否白色物件
+        private bool _rangeResult = false; // 是否輸出範圍結果
+        private int _rangeLength = 0; // 範圍結果的長度
+        private bool _rangeResultIsX = false; // 是否輸出範圍結果
 
         public FindObjectDef(string SystemPath, int Index) : base(SystemPath, Index)
         {
@@ -53,8 +57,11 @@ namespace VisionLibrary
             _ratio = ini.ReadFloat(section, "Ratio", 0.5f);
             _isScale = ini.ReadBool(section, "Scale", true);
             _openSize = ini.ReadInt(section, "OpenSize", 0);
+            _erodeSize = ini.ReadInt(section, "ErodeSize", 0);
             _white_class = ini.ReadBool(section, "WhiteClass", false);
-
+            _rangeResult = ini.ReadBool(section, "RangeResult", false);
+            _rangeResultIsX = ini.ReadBool(section, "RangeResultIsX", true);
+            _rangeLength = ini.ReadInt(section, "RangeLength", 30);
             ini.FileClose();
             ini.Dispose();
         }
@@ -77,9 +84,16 @@ namespace VisionLibrary
 
                 if(_openSize > 0)
                 {
-                    using (Mat element = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.ElementShape.Cross, new Size(_openSize, _openSize), new Point(-1, -1)))
+                    using (Mat element = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.ElementShape.Ellipse, new Size(_openSize, _openSize), new Point(-1, -1)))
                     {
                         CvInvoke.MorphologyEx(imageResult, imageResult, Emgu.CV.CvEnum.MorphOp.Open, element, new Point(-1, -1), 3, Emgu.CV.CvEnum.BorderType.Default, new MCvScalar(0, 0, 0));
+                    }
+                }
+                if (_erodeSize > 0)
+                {
+                    using (Mat element = CvInvoke.GetStructuringElement(Emgu.CV.CvEnum.ElementShape.Ellipse, new Size(_erodeSize, _erodeSize), new Point(-1, -1)))
+                    {
+                        CvInvoke.MorphologyEx(imageResult, imageResult, Emgu.CV.CvEnum.MorphOp.Erode, element, new Point(-1, -1), 3, Emgu.CV.CvEnum.BorderType.Default, new MCvScalar(0, 0, 0));
                     }
                 }
 
@@ -132,8 +146,56 @@ namespace VisionLibrary
                 img.Dispose();
                 imageScale.Dispose();
 
-                _points = listP.ToArray();
-                _rectangles = listR.ToArray();
+                if (_rangeResult)
+                {
+                    List<PointF> listP1 = new List<PointF>();
+                    for (int i =0; i < listR.Count; i++)
+                    {
+                        int xNum = listR[i].Width / _rangeLength;
+                        int yNum = listR[i].Height / _rangeLength;
+
+                        if(_rangeResultIsX)
+                        {
+                            if (xNum > 0)
+                            {
+                                for (int j = 0; j < xNum; j++)
+                                {
+                                    PointF p = new PointF(listR[i].X + j * _rangeLength, listR[i].Y+ listR[i].Height/2);
+                                    listP1.Add(p);
+                                }
+                            }
+                            else
+                            {
+                                PointF p = new PointF(listP[i].X, listP[i].Y);
+                                listP1.Add(p);
+                            }
+                        }
+                        else
+                        {
+                            if (yNum > 0)
+                            {
+                                for (int j = 0; j < yNum; j++)
+                                {
+                                    PointF p = new PointF(listR[i].Y + listR[i].Height / 2, listR[i].Y + j * _rangeLength);
+                                    listP1.Add(p);
+                                }
+                            }
+                            else
+                            {
+                                PointF p = new PointF(listP[i].X, listP[i].Y);
+                                listP1.Add(p);
+                            }
+                        }
+                    }
+
+                    _points = listP1.ToArray();
+                    _rectangles = listR.ToArray();
+                }
+                else
+                {
+                    _points = listP.ToArray();
+                    _rectangles = listR.ToArray();
+                }
             }
             else
             {
