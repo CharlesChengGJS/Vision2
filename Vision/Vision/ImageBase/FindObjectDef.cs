@@ -156,7 +156,7 @@ namespace VisionLibrary
 
                         if(_rangeResultIsX)
                         {
-                            if (xNum > 0)
+                            if (xNum > 1)
                             {
                                 for (int j = 0; j < xNum; j++)
                                 {
@@ -172,11 +172,11 @@ namespace VisionLibrary
                         }
                         else
                         {
-                            if (yNum > 0)
+                            if (yNum > 1)
                             {
                                 for (int j = 0; j < yNum; j++)
                                 {
-                                    PointF p = new PointF(listR[i].Y + listR[i].Height / 2, listR[i].Y + j * _rangeLength);
+                                    PointF p = new PointF(listR[i].X + listR[i].Width / 2, listR[i].Y + j * _rangeLength);
                                     listP1.Add(p);
                                 }
                             }
