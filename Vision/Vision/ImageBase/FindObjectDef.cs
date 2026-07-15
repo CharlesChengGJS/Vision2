@@ -160,9 +160,12 @@ namespace VisionLibrary
                             {
                                 for (int j = 0; j < xNum; j++)
                                 {
-                                    PointF p = new PointF(listR[i].X + j * _rangeLength, listR[i].Y+ listR[i].Height/2);
+                                    PointF p = new PointF(listR[i].X + j * _rangeLength, listP[i].Y);
                                     listP1.Add(p);
                                 }
+
+                                PointF cp = new PointF(listP[i].X, listP[i].Y);
+                                listP1.Add(cp);
                             }
                             else
                             {
@@ -176,9 +179,12 @@ namespace VisionLibrary
                             {
                                 for (int j = 0; j < yNum; j++)
                                 {
-                                    PointF p = new PointF(listR[i].X + listR[i].Width / 2, listR[i].Y + j * _rangeLength);
-                                    listP1.Add(p);
+                                    PointF cp = new PointF(listP[i].X, listR[i].Y + j * _rangeLength);
+                                    listP1.Add(cp);
                                 }
+
+                                PointF p = new PointF(listP[i].X, listP[i].Y);
+                                listP1.Add(p);
                             }
                             else
                             {
