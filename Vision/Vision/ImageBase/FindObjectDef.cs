@@ -77,7 +77,8 @@ namespace VisionLibrary
             {
                 Image<Bgr, byte> imageScale = new Image<Bgr, byte>(SrcImage.Width/2, SrcImage.Height/2);
                 Image<Bgr, byte> img = SrcImage.Clone();
-                CvInvoke.Resize(SrcImage, imageScale, new Size(0, 0), 0.5, 0.5, Inter.Linear);
+                // 指定 dsize，避免 ROI 寬/高為 4n+3 時 OpenCV 四捨五入後尺寸與 imageScale 不符而重新配置，導致 imageScale 資料未寫入
+                CvInvoke.Resize(SrcImage, imageScale, imageScale.Size, 0, 0, Inter.Linear);
 
                 Image<Gray, byte> imageResult = ImageArithmetic(imageScale, _formula);
 
