@@ -68,16 +68,14 @@ namespace VisionLibrary.Camera
 
             // Load parameters
             _Cam.Parameters[PLCameraInstance.MaxNumBuffer].SetValue(5);
-            _Cam.Parameters[PLCamera.ShutterMode].SetValue(PLCamera.ShutterMode.Rolling);
+            _Cam.Parameters[PLCamera.ShutterMode].TrySetValue(PLCamera.ShutterMode.Rolling);  //部分機種(如 GigE acA2500-14gm)無 ShutterMode, 有才設定
             //Cam.Parameters[PLCameraInstance.OutputQueueSize].SetValue(3);
 
             // Start the grabbing of images until grabbing is stopped.
 
-            if (_Cam.CanWaitForFrameTriggerReady)
-            {
-                _Cam.StreamGrabber.ImageGrabbed += OnImageGrabbed;
-                _Cam.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
-            }
+            //不再以 CanWaitForFrameTriggerReady 判斷, 部分 GigE 機種(如 acA2500-14gm)為 false 時會完全沒有啟動取像
+            _Cam.StreamGrabber.ImageGrabbed += OnImageGrabbed;
+            _Cam.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
 
             if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerUsb")
             {
@@ -120,7 +118,7 @@ namespace VisionLibrary.Camera
             //}
             GrabEvent.Reset();
             if (!GrabEvent.WaitOne(10000))
-                throw new Exception("Grab fail.");
+                throw new Exception("Grab fail. " + GetGrabFailInfo());
             lock (Lock)
             {
                 CvInvoke.CvtColor(_GrabImage, cOutputArray, _format);
@@ -132,7 +130,20 @@ namespace VisionLibrary.Camera
         {
 
         }
-        //int ImageGrabbedFailTimes = 0;
+        private int _GrabFailTimes = 0;
+        private string _LastGrabError = "";
+
+        /// <summary>Grab fail 時的診斷資訊: 是否取像中、失敗次數、最後一次錯誤</summary>
+        private string GetGrabFailInfo()
+        {
+            string info = "IsGrabbing=" + _Cam.StreamGrabber.IsGrabbing + ", FailTimes=" + _GrabFailTimes;
+            if (_LastGrabError != "")
+                info += ", LastError=" + _LastGrabError;
+            if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerGigE")
+                info += ", PacketSize=" + _Cam.Parameters[PLCamera.GevSCPSPacketSize].GetValue();
+            return info;
+        }
+
         private void OnImageGrabbed(Object sender, ImageGrabbedEventArgs e)
         {
             //Mat mat;
@@ -155,12 +166,15 @@ namespace VisionLibrary.Camera
                 }
                 else
                 {
-
-                    // _GrabFailTimes++;
+                    //記錄失敗原因, Grab fail 時帶出 (GigE 常見: 封包大小超過網卡 MTU / 頻寬不足 → 0xE1000014 incompletely grabbed)
+                    _GrabFailTimes++;
+                    _LastGrabError = "0x" + grabResult.ErrorCode.ToString("X") + " " + grabResult.ErrorDescription;
                 }
             }
             catch (Exception ex)
             {
+                _GrabFailTimes++;
+                _LastGrabError = ex.Message;
                 MessageBox.Show(ex.ToString(), "PylonNet5ToUMat", MessageBoxButtons.OK, MessageBoxIcon.Stop);
             }
             finally
