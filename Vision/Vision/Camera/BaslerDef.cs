@@ -21,7 +21,8 @@ namespace VisionLibrary.Camera
         private readonly string _SerialNum;
         private readonly double _Resolution;
         private readonly string _ErrorCode;
-      
+        private readonly double _FrameRate;
+
         private Emgu.CV.CvEnum.ColorConversion _format;
 
         private Mat _GrabImage;
@@ -32,12 +33,14 @@ namespace VisionLibrary.Camera
         public double CameraBlackLevelPercentageValue { get; private set; }
         public double CameraExposureTimePercentageValue { get; private set; }
 
-        public BaslerDef(string serialNum, double fResolution,  Emgu.CV.CvEnum.ColorConversion Format = Emgu.CV.CvEnum.ColorConversion.BayerGb2Rgb)
+        /// <param name="frameRate">連續取像幀率上限, 小於等於 0 表示不限制 (以相機最大速度取像)</param>
+        public BaslerDef(string serialNum, double fResolution,  Emgu.CV.CvEnum.ColorConversion Format = Emgu.CV.CvEnum.ColorConversion.BayerGb2Rgb, double frameRate = 10)
         {
             try
             {
                 _format = Format;
-                
+                _FrameRate = frameRate;
+
                 //_GrabImage = null;
                 _ErrorCode = string.Empty;
                 _Resolution = fResolution;
@@ -62,20 +65,14 @@ namespace VisionLibrary.Camera
         private void OpenCamera()
         {
 
+            //事件只訂閱一次, 斷線重連時不重複訂閱
             _Cam.CameraOpened += Configuration.AcquireContinuous;
+            _Cam.ConnectionLost += OnConnectionLost;
+            _Cam.StreamGrabber.ImageGrabbed += OnImageGrabbed;
             _Cam.Open();
             _GrabImage = new Mat(new Size(GetWidth(), GetHeight()), Emgu.CV.CvEnum.DepthType.Cv8U, 1);
 
-            // Load parameters
-            _Cam.Parameters[PLCameraInstance.MaxNumBuffer].SetValue(5);
-            _Cam.Parameters[PLCamera.ShutterMode].TrySetValue(PLCamera.ShutterMode.Rolling);  //部分機種(如 GigE acA2500-14gm)無 ShutterMode, 有才設定
-            //Cam.Parameters[PLCameraInstance.OutputQueueSize].SetValue(3);
-
-            // Start the grabbing of images until grabbing is stopped.
-
-            //不再以 CanWaitForFrameTriggerReady 判斷, 部分 GigE 機種(如 acA2500-14gm)為 false 時會完全沒有啟動取像
-            _Cam.StreamGrabber.ImageGrabbed += OnImageGrabbed;
-            _Cam.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
+            StartGrab();
 
             if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerUsb")
             {
@@ -86,8 +83,6 @@ namespace VisionLibrary.Camera
             }
             if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerGigE")
             {
-                _Cam.Parameters[PLCamera.GammaEnable].TrySetValue(true);
-                _Cam.Parameters[PLCamera.GevHeartbeatTimeout].SetValue(3000);
                 CameraGainPercentageValue = _Cam.Parameters[PLCamera.GainRaw].GetValuePercentOfRange();
                 CameraGammaPercentageValue = _Cam.Parameters[PLCamera.Gamma].GetValuePercentOfRange();
                 CameraBlackLevelPercentageValue = _Cam.Parameters[PLCamera.BlackLevelRaw].GetValuePercentOfRange();
@@ -95,6 +90,80 @@ namespace VisionLibrary.Camera
             // if (DeviceType == "BaslerGigE") Cam.Parameters[PLCamera.ExposureTimeAbs].SetValue(35000, FloatValueCorrection.ClipToRange);
             // if (DeviceType == "BaslerUsb") Cam.Parameters[PLCamera.ExposureTime].SetValue(35000, FloatValueCorrection.ClipToRange);
             IsOpen = true;
+        }
+
+        /// <summary>設定取像參數並啟動 StreamGrabber (開啟與斷線重連共用)</summary>
+        private void StartGrab()
+        {
+            // Load parameters
+            _Cam.Parameters[PLCameraInstance.MaxNumBuffer].SetValue(5);
+            _Cam.Parameters[PLCamera.ShutterMode].TrySetValue(PLCamera.ShutterMode.Rolling);  //部分機種(如 GigE acA2500-14gm)無 ShutterMode, 有才設定
+            //Cam.Parameters[PLCameraInstance.OutputQueueSize].SetValue(3);
+
+            if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerGigE")
+            {
+                _Cam.Parameters[PLCamera.GammaEnable].TrySetValue(true);
+                _Cam.Parameters[PLCamera.GevHeartbeatTimeout].SetValue(3000);
+                //StreamGrabber 開啟時自動測試網路可用的最大封包並設到相機 (網卡需開 Jumbo Packet 9014, 否則維持 1500)
+                _Cam.Parameters[PLGigEStream.AutoPacketSize].TrySetValue(true);
+                //封包遺失時要求相機重送, 避免整張影像作廢 (0xE1000014 incompletely grabbed)
+                _Cam.Parameters[PLGigEStream.EnableResend].TrySetValue(true);
+            }
+
+            //限制連續取像幀率, 避免滿速取像佔滿 GigE 頻寬造成掉封包
+            SetFrameRate();
+
+            //相機斷電重開後參數會回到 UserSet 預設, 重新套用曝光
+            if (_ExposureTimeSet)
+                SetExposureTime((int)(CameraExposureTimePercentageValue * 100));
+
+            // Start the grabbing of images until grabbing is stopped.
+
+            //不再以 CanWaitForFrameTriggerReady 判斷, 部分 GigE 機種(如 acA2500-14gm)為 false 時會完全沒有啟動取像
+            _Cam.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
+        }
+
+        private void SetFrameRate()
+        {
+            if (_FrameRate <= 0)
+            {
+                _Cam.Parameters[PLCamera.AcquisitionFrameRateEnable].TrySetValue(false);
+                return;
+            }
+
+            _Cam.Parameters[PLCamera.AcquisitionFrameRateEnable].TrySetValue(true);
+            if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerUsb")
+                _Cam.Parameters[PLCamera.AcquisitionFrameRate].TrySetValue(_FrameRate, FloatValueCorrection.ClipToRange);
+            if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerGigE")
+                _Cam.Parameters[PLCamera.AcquisitionFrameRateAbs].TrySetValue(_FrameRate, FloatValueCorrection.ClipToRange);
+        }
+
+        private readonly object ReconnectLock = new object();
+        private int _ReconnectTimes = 0;
+        private bool _ExposureTimeSet = false;
+
+        private void OnConnectionLost(Object sender, EventArgs e)
+        {
+            _LastGrabError = "Connection lost";
+        }
+
+        /// <summary>
+        /// GigE 斷線(Heartbeat timeout / 網路線 / 供電)後 Control channel 會關閉, 需 Close 再 Open 才能恢復取像
+        /// </summary>
+        private void Reconnect()
+        {
+            lock (ReconnectLock)
+            {
+                if (_Cam.IsOpen && _Cam.IsConnected && _Cam.StreamGrabber.IsGrabbing)
+                    return;
+
+                _Cam.Close();
+                if (!_Cam.Open(5000, TimeoutHandling.Return))
+                    throw new Exception("Camera reconnect fail (" + _SerialNum + "). " + GetGrabFailInfo());
+
+                StartGrab();
+                _ReconnectTimes++;
+            }
         }
 
 
@@ -116,6 +185,9 @@ namespace VisionLibrary.Camera
             //{
             //    _Cam.ExecuteSoftwareTrigger();
             //}
+            if (!_Cam.IsOpen || !_Cam.IsConnected || !_Cam.StreamGrabber.IsGrabbing)
+                Reconnect();
+
             GrabEvent.Reset();
             if (!GrabEvent.WaitOne(10000))
                 throw new Exception("Grab fail. " + GetGrabFailInfo());
@@ -136,11 +208,16 @@ namespace VisionLibrary.Camera
         /// <summary>Grab fail 時的診斷資訊: 是否取像中、失敗次數、最後一次錯誤</summary>
         private string GetGrabFailInfo()
         {
-            string info = "IsGrabbing=" + _Cam.StreamGrabber.IsGrabbing + ", FailTimes=" + _GrabFailTimes;
+            string info = "IsConnected=" + _Cam.IsConnected + ", IsGrabbing=" + _Cam.StreamGrabber.IsGrabbing + ", FailTimes=" + _GrabFailTimes + ", ReconnectTimes=" + _ReconnectTimes;
             if (_LastGrabError != "")
                 info += ", LastError=" + _LastGrabError;
-            if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerGigE")
-                info += ", PacketSize=" + _Cam.Parameters[PLCamera.GevSCPSPacketSize].GetValue();
+            //斷線時讀相機參數會丟 "Control channel not open", 不可蓋掉原本的錯誤訊息
+            try
+            {
+                if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerGigE")
+                    info += ", PacketSize=" + _Cam.Parameters[PLCamera.GevSCPSPacketSize].GetValue() + ", InterPacketDelay=" + _Cam.Parameters[PLCamera.GevSCPD].GetValue() + ", FrameRate=" + _Cam.Parameters[PLCamera.ResultingFrameRateAbs].GetValue().ToString("0.0");
+            }
+            catch { }
             return info;
         }
 
@@ -317,6 +394,7 @@ namespace VisionLibrary.Camera
         public override void SetExposureTime(int value)
         {
             CameraExposureTimePercentageValue = (double)value / 100;
+            _ExposureTimeSet = true;
             try
             {
                 if (_Cam.CameraInfo[CameraInfoKey.DeviceType] == "BaslerUsb")
