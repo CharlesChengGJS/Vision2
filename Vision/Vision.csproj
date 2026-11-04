@@ -118,10 +118,12 @@
     <Compile Include="Vision\Camera\LogitechDef.cs" />
     <Compile Include="Vision\ImageBase\FindCornerDef .cs" />
     <Compile Include="Vision\ImageBase\FindEdge.cs" />
+    <Compile Include="Vision\ImageBase\FindHoleDef.cs" />
     <Compile Include="Vision\ImageBase\FindObjectDef.cs" />
     <Compile Include="Vision\ImageBase\InspectBase.cs" />
     <Compile Include="Vision\ImageBase\JudgeObjectDef.cs" />
     <Compile Include="Vision\ImageBase\MatchObjectDef.cs" />
+    <Compile Include="Vision\Process\HoleSampler.cs" />
     <Compile Include="Vision\Process\Process.cs" />
   </ItemGroup>
   <ItemGroup />

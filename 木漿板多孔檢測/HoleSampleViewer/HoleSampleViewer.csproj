@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>HoleSampleViewer</RootNamespace>
+    <AssemblyName>HoleSampleViewer</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <VisionDir>$(MSBuildProjectDirectory)\..\..\Vision\</VisionDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 與 FindHoleDef 共用同一份演算法 -->
+    <Compile Include="$(VisionDir)Vision\Process\HoleSampler.cs" Link="HoleSampler.cs" />
+    <!-- 與 Vision 專案使用相同的 EmguCV 4.4 -->
+    <Reference Include="Emgu.CV.Platform.NetStandard"><HintPath>$(VisionDir)GJSDLL\Emgu.CV.Platform.NetStandard.dll</HintPath></Reference>
+    <Reference Include="System.Drawing.Common"><HintPath>$(VisionDir)GJSDLL\System.Drawing.Common.dll</HintPath></Reference>
+    <Reference Include="System.Buffers"><HintPath>$(VisionDir)packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath></Reference>
+    <Reference Include="System.Memory"><HintPath>$(VisionDir)packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath></Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe"><HintPath>$(VisionDir)packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath></Reference>
+    <None Include="$(VisionDir)packages\Emgu.CV.runtime.windows.4.4.0.4099\build\x64\**\*" Link="x64\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
