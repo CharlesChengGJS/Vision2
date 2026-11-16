@@ -16,7 +16,7 @@ namespace VisionLibrary
         private EProcessType _processType;
         private Rectangle _limitROI;
         private Size _searchSize;
-        private InpectBase _inspect;
+        private InspectBase _inspect;
 
         private Rectangle _roi;
         private CameraCollectionDef _cameraCollection;
@@ -52,13 +52,13 @@ namespace VisionLibrary
                         OrgY = _limitROI.Y;
                     if (OrgX + W > _limitROI.Width + _limitROI.X)
                     { 
-                        W = _limitROI.Width - OrgX + _limitROI.X;
+                        W = _limitROI.Width - OrgX + _limitROI.X - 1;
                         if (W < 0)
                             W = 0;
                     }
                     if (OrgY + H > _limitROI.Height + _limitROI.Y)
                     { 
-                        H = _limitROI.Height - OrgY + _limitROI.Y;
+                        H = _limitROI.Height - OrgY + _limitROI.Y - 1;
                         if (H < 0)
                             H = 0;
                     }
@@ -85,7 +85,7 @@ namespace VisionLibrary
             RefreshROI(p);
         }
 
-        public InpectBase GetInspectBase()
+        public InspectBase GetInspectBase()
         {
             return _inspect;
         }

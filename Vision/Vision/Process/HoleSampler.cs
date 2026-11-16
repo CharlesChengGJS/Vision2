@@ -314,7 +314,8 @@ namespace VisionLibrary
         /// 取出區域內面積足夠的區塊，結果寫回全圖座標。
         /// 孔碰到 ROI 的內側邊界代表 ROI 切到孔，回傳 false。
         /// ROI 內已超過 MaxArea 的區塊，實際只會更大，所以即使被切到也可以直接排除。
-        /// foreground 也計入超過 MaxArea 的區塊，否則亮暗設反時整片背景被排除，就判斷不出來。
+        /// foreground 只計入面積在 MinArea ~ MaxArea 之間的區塊：超過 MaxArea 的（例如背光區）先濾掉，
+        /// 否則 ROI 蓋到大片背光時會被誤判為亮暗設反而不取座標。亮暗設反時請看 OversizedBlobCount。
         /// </summary>
         private static bool ExtractBlobs(Mat binary, Rectangle region, HoleSampleOptions options, HoleSampleResult result, List<List<Point>> blobPixels, ref long foreground)
         {
@@ -330,9 +331,12 @@ namespace VisionLibrary
             {
                 if (areas[id] < options.MinArea)
                     continue;
-                foreground += areas[id];
                 if (areas[id] > options.MaxArea)
+                {
                     result.OversizedBlobCount++;
+                    continue;
+                }
+                foreground += areas[id];
             }
 
             bool cutLeft = region.X > 0, cutTop = region.Y > 0;

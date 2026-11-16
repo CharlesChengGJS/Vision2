@@ -8,6 +8,9 @@ using System.Drawing;
 using System.IO;
 using static VisionLibrary.Process;
 using nsAlignAlgorithm;
+using MathNet.Numerics;
+using Microsoft.VisualBasic.Logging;
+using CommonLibrary;
 
 namespace VisionLibrary
 {
@@ -34,11 +37,20 @@ namespace VisionLibrary
             Count
         }
 
+        public enum ErrorCode
+        {
+            None,
+            AlignCorner1NotFound,
+            AlignCorner2NotFound,
+            SizeError,
+        }   
+
         private string _systemPath;
         private EProcessType[] _processType;
         private Rectangle[] _limitROI;
         private Size[] _searchSize;
-        private InpectBase[] _inspect;
+        private InspectBase[] _inspect;
+        private InspectBase[] _inspect2;
         private PointF[] _ccdCenterPoint;
         private ECamera[] _eCamera;
         private Rectangle[] _roi;
@@ -48,17 +60,23 @@ namespace VisionLibrary
         private PointF _panelSize;
         private Quadrant[] _cornerQuadrant;
         private PointF[] _corners;
+        private PointF[] _corner_shift;
         private PointF _rotateCenter;
         private CameraCollectionDef _cameraCollection;
         private double _shiftX;
         private double _shiftY;
         private double _shiftAngle;
+        private double _corner1RotateAngle;
+        private PointF _panelCenterShift;
         private int _index;
         private AlignType _alignType;
         private bool _success;
         private float _distanceTolerance;
-        public string ErrorCode;
-
+        public ErrorCode Error;
+        public double Distance;
+        private int _resultIndex1 = -1;
+        private int _resultIndex2 = -1;
+        public bool EnableFindHole = false;
         public PanelAlignDef(string SystemPath, CameraCollectionDef Cameras, ECamera Camera1, ECamera Camera2, int Index)
         {
             _eCamera = new ECamera[(int)CornerIndex.Count];
@@ -70,10 +88,12 @@ namespace VisionLibrary
             _processType = new EProcessType[(int)CornerIndex.Count];
             _limitROI = new Rectangle[(int)CornerIndex.Count];
             _searchSize = new Size[2];
-            _inspect = new InpectBase[(int)CornerIndex.Count];
+            _inspect = new InspectBase[(int)CornerIndex.Count];
+            _inspect2 = new InspectBase[(int)CornerIndex.Count];
             _roi = new Rectangle[2];
             _cornerQuadrant = new Quadrant[(int)CornerIndex.Count];
             _corners = new PointF[2];
+            _corner_shift = new PointF[2];
             _ccdCenterPoint = new PointF[(int)CornerIndex.Count];
 
             _alignAlgorithm = new cAlignAlgorithmDef();
@@ -104,19 +124,21 @@ namespace VisionLibrary
                         OrgY = _limitROI[cornerIndex].Y;
                     if (OrgX + W > _limitROI[cornerIndex].Width + _limitROI[cornerIndex].X)
                     { 
-                        W = _limitROI[cornerIndex].Width - OrgX + _limitROI[cornerIndex].X;
+                        W = _limitROI[cornerIndex].Width - OrgX + _limitROI[cornerIndex].X - 1;
                         if (W < 0)
                             W = 0;
                     }
                     if (OrgY + H > _limitROI[cornerIndex].Height + _limitROI[cornerIndex].Y)
                     { 
-                        H = _limitROI[cornerIndex].Height - OrgY + _limitROI[cornerIndex].Y;
+                        H = _limitROI[cornerIndex].Height - OrgY + _limitROI[cornerIndex].Y - 1;
                         if (H < 0)
                             H = 0;
                     }
                 }
 
 
+                W = W / 4 * 4;
+                H = H / 4 * 4;
                 _roi[cornerIndex] = new Rectangle(OrgX, OrgY, W, H);
                 return;
             }
@@ -153,7 +175,7 @@ namespace VisionLibrary
 
             return new Point(orgX, orgY);
         }
-        public void SetPanelCenter(Point P)
+        public void SetPanelCenter(PointF P)
         {
             _panelCenter = P;
             UpdateCorner();
@@ -168,6 +190,40 @@ namespace VisionLibrary
 
         }
 
+        /// <summary>
+        /// 以Corner1為旋轉中心，將Corner2的對位目標位置旋轉angle(度)，使對位結果依此角度旋轉
+        /// </summary>
+        public void RotateByCorner1(double angle)
+        {
+            _corner1RotateAngle = angle;
+            UpdateCorner();
+        }
+
+        /// <summary>
+        /// 將面板中心(兩個Corner的對位目標位置)偏移(X, Y)，使對位結果依此偏移；設(0, 0)即取消偏移
+        /// </summary>
+        public void ShiftPanelCenter(double X, double Y)
+        {
+            _panelCenterShift = new PointF((float)X, (float)Y);
+            UpdateCorner();
+        }
+
+        // 以Corner1(未旋轉前位置，旋轉後不變)為中心，將P旋轉_corner1RotateAngle
+        private PointF RotateByCorner1(PointF P)
+        {
+            if (_corner1RotateAngle == 0)
+                return P;
+
+            double rad = _corner1RotateAngle * Math.PI / 180.0;
+            double cos = Math.Cos(rad);
+            double sin = Math.Sin(rad);
+            double dx = P.X - _corners[0].X;
+            double dy = P.Y - _corners[0].Y;
+            return new PointF(
+                (float)(_corners[0].X + dx * cos - dy * sin),
+                (float)(_corners[0].Y + dx * sin + dy * cos));
+        }
+
         public void SetDistanceTolerance(float Tolerance)
         {
             _distanceTolerance = Tolerance;
@@ -178,91 +234,275 @@ namespace VisionLibrary
             return _success;
         }
 
-        public InpectBase GetInspectBase(CornerIndex Corner)
+        public InspectBase GetInspectBase(CornerIndex Corner)
         {
+            if(EnableFindHole)
+                return _inspect2[(int)Corner];
             return _inspect[(int)Corner];
         }
 
+        
+
         public PointF GetResult(CornerIndex Corner)
         {
-            PointF result = _inspect[(int)Corner].GetResult()[0];
-            result.X = result.X + _roi[(int)Corner].X;
-            result.Y = result.Y + _roi[(int)Corner].Y;
-            return result;
+            if (EnableFindHole)
+            {
+                if (_inspect2[(int)Corner].GetResult().Length < 1)
+                    return new PointF(0, 0);
+
+                int index = _resultIndex1;
+                if (Corner == CornerIndex.Corner2)
+                    index = _resultIndex2;
+                if (index < 0 || index >= _inspect2[(int)Corner].GetResult().Length)
+                    return new PointF(0, 0);
+                PointF result = _inspect2[(int)Corner].GetResult()[index];
+                result.X = result.X + _roi[(int)Corner].X;
+                result.Y = result.Y + _roi[(int)Corner].Y;
+                return result;
+            }
+            else
+            {
+
+                if (_inspect[(int)Corner].GetResult().Length < 1)
+                    return new PointF(0, 0);
+
+                int index = _resultIndex1;
+                if (Corner == CornerIndex.Corner2)
+                    index = _resultIndex2;
+                if (index < 0 || index >= _inspect[(int)Corner].GetResult().Length)
+                    return new PointF(0, 0);
+                PointF result = _inspect[(int)Corner].GetResult()[index];
+                result.X = result.X + _roi[(int)Corner].X;
+                result.Y = result.Y + _roi[(int)Corner].Y;
+                return result;
+            }
         }
+
+       
 
         public void Align(Image<Bgr, byte> SrcImage1, Image<Bgr, byte> SrcImage2)
         {
+           
             _success = false;
+            _resultIndex1 = -1;
+            _resultIndex2 = -1;
 
-            SrcImage1.ROI = _roi[0];
-            _inspect[0].Inspect(SrcImage1);
-            SrcImage2.ROI = _roi[1];
-            _inspect[1].Inspect(SrcImage2);
-
-            SrcImage1.ROI = Rectangle.Empty;
-            SrcImage2.ROI = Rectangle.Empty;
-
-            if (_inspect[0].GetResult().Length == 0)
+            if (EnableFindHole)
             {
-                ErrorCode = "Align Corner1 not Found";
-                return;
-            }
+                SrcImage1.ROI = _roi[0];
+                _inspect2[0].Inspect(SrcImage1);
+                SrcImage2.ROI = _roi[1];
+                _inspect2[1].Inspect(SrcImage2);
 
-            if (_inspect[1].GetResult().Length == 0)
+                SrcImage1.ROI = Rectangle.Empty;
+                SrcImage2.ROI = Rectangle.Empty;
+
+                if (_inspect2[0].GetResult().Length == 0)
+                {
+                    Error = ErrorCode.AlignCorner1NotFound;
+                    return;
+                }
+
+                if (_inspect2[1].GetResult().Length == 0)
+                {
+                    Error = ErrorCode.AlignCorner2NotFound;
+                    return;
+                }
+
+
+                double oriDistance = GetDistance(_corners[0], _corners[1]);
+                double minTolerance = oriDistance;
+
+                double MinDis = 0;
+                PointF cartesianP1 = new PointF();
+                PointF cartesianP2 = new PointF();
+                for (int i = 0; i < _inspect2[0].GetResult().Length; i++)
+                {
+                    for (int j = 0; j < _inspect2[1].GetResult().Length; j++)
+                    {
+                        PointF imageP1 = _inspect2[0].GetResult()[i];
+                        PointF imageP2 = _inspect2[1].GetResult()[j];
+
+                        imageP1.X += _roi[0].X;
+                        imageP1.Y += _roi[0].Y;
+
+                        imageP2.X += _roi[1].X;
+                        imageP2.Y += _roi[1].Y;
+
+                        PointF p1 = GetCartesianPoint(imageP1, _eCamera[0], _ccdCenterPoint[0]);
+                        PointF p2 = GetCartesianPoint(imageP2, _eCamera[1], _ccdCenterPoint[1]);
+
+
+                        Distance = GetDistance(p1, p2);
+                        if (Math.Abs(Distance - oriDistance) < minTolerance)
+                        {
+                            minTolerance = Math.Abs(Distance - oriDistance);
+                            MinDis = Distance;
+                            _resultIndex1 = i;
+                            _resultIndex2 = j;
+                            cartesianP1 = GetCartesianPoint(imageP1, _eCamera[0], _ccdCenterPoint[0]);
+                            cartesianP2 = GetCartesianPoint(imageP2, _eCamera[1], _ccdCenterPoint[1]);
+                        }
+
+                    }
+                }
+
+                Distance = MinDis;
+
+                LogDef.Add(
+                    ELogFileName.Vision,
+                    this.GetType().Name,
+                    System.Reflection.MethodBase.GetCurrentMethod().Name,
+                    "Best Corner0 Result" + _resultIndex1.ToString() + ",Corner1 Result" + _resultIndex2.ToString() + ",Distance:" + Distance.ToString());
+
+                if (Math.Abs(MinDis - oriDistance) > _distanceTolerance)
+                {
+                    Error = ErrorCode.SizeError;
+                    return;
+                }
+
+
+
+                _corner_shift[0] = new PointF(cartesianP1.X - _corners[0].X, cartesianP1.Y - _corners[0].Y);
+                _corner_shift[1] = new PointF(cartesianP2.X - _corners[1].X, cartesianP2.Y - _corners[1].Y);
+
+                if (_alignType == AlignType.PanelOnTable)
+                {
+                    _alignAlgorithm.vGetShift(
+                       _corner_shift[0].X,
+                       _corner_shift[0].Y,
+                       _corner_shift[1].X,
+                       _corner_shift[1].Y,
+                       ref _shiftX,
+                       ref _shiftY,
+                       ref _shiftAngle);
+                }
+                else if (_alignType == AlignType.PanelOnHand)
+                {
+                    _alignAlgorithm.vGetShiftByPoint(
+                       _corner_shift[0].X,
+                       _corner_shift[0].Y,
+                       _corner_shift[1].X,
+                       _corner_shift[1].Y,
+                       ref _shiftX,
+                       ref _shiftY,
+                       ref _shiftAngle);
+                }
+            }
+            else
             {
-                ErrorCode = "Align Corner2 not Found";
-                return;
+                SrcImage1.ROI = _roi[0];
+                _inspect[0].Inspect(SrcImage1);
+                SrcImage2.ROI = _roi[1];
+                _inspect[1].Inspect(SrcImage2);
+
+                SrcImage1.ROI = Rectangle.Empty;
+                SrcImage2.ROI = Rectangle.Empty;
+
+                if (_inspect[0].GetResult().Length == 0)
+                {
+                    Error = ErrorCode.AlignCorner1NotFound;
+                    return;
+                }
+
+                if (_inspect[1].GetResult().Length == 0)
+                {
+                    Error = ErrorCode.AlignCorner2NotFound;
+                    return;
+                }
+
+              
+                double oriDistance = GetDistance(_corners[0], _corners[1]);
+                double minTolerance = oriDistance;
+
+                double MinDis = 0;
+                PointF cartesianP1 = new PointF();
+                PointF cartesianP2 = new PointF();
+                for (int i = 0; i < _inspect[0].GetResult().Length; i++)
+                {
+                    for (int j = 0; j < _inspect[1].GetResult().Length; j++)
+                    {
+                        PointF imageP1 = _inspect[0].GetResult()[i];
+                        PointF imageP2 = _inspect[1].GetResult()[j];
+
+                        imageP1.X += _roi[0].X;
+                        imageP1.Y += _roi[0].Y;
+
+                        imageP2.X += _roi[1].X;
+                        imageP2.Y += _roi[1].Y;
+
+                        PointF p1 = GetCartesianPoint(imageP1, _eCamera[0], _ccdCenterPoint[0]);
+                        PointF p2 = GetCartesianPoint(imageP2, _eCamera[1], _ccdCenterPoint[1]);
+
+
+                        Distance = GetDistance(p1, p2);
+                        if (Math.Abs(Distance - oriDistance) < minTolerance)
+                        {
+                            minTolerance = Math.Abs(Distance - oriDistance);
+                            MinDis = Distance;
+                            _resultIndex1 = i;
+                            _resultIndex2 = j;
+                            cartesianP1 = GetCartesianPoint(imageP1, _eCamera[0], _ccdCenterPoint[0]);
+                            cartesianP2 = GetCartesianPoint(imageP2, _eCamera[1], _ccdCenterPoint[1]);
+                        }
+
+                    }
+                }
+
+                Distance = MinDis;
+
+                LogDef.Add(
+                    ELogFileName.Vision,
+                    this.GetType().Name,
+                    System.Reflection.MethodBase.GetCurrentMethod().Name,
+                    "Best Corner0 Result" + _resultIndex1.ToString() + ",Corner1 Result" + _resultIndex2.ToString() + ",Distance:" + Distance.ToString());
+
+                if (Math.Abs(MinDis - oriDistance) > _distanceTolerance)
+                {
+                    Error = ErrorCode.SizeError;
+                    return;
+                }
+
+
+
+                _corner_shift[0] = new PointF(cartesianP1.X - _corners[0].X, cartesianP1.Y - _corners[0].Y);
+                _corner_shift[1] = new PointF(cartesianP2.X - _corners[1].X, cartesianP2.Y - _corners[1].Y);
+
+                if (_alignType == AlignType.PanelOnTable)
+                {
+                    _alignAlgorithm.vGetShift(
+                       _corner_shift[0].X,
+                       _corner_shift[0].Y,
+                       _corner_shift[1].X,
+                       _corner_shift[1].Y,
+                       ref _shiftX,
+                       ref _shiftY,
+                       ref _shiftAngle);
+                }
+                else if (_alignType == AlignType.PanelOnHand)
+                {
+                    _alignAlgorithm.vGetShiftByPoint(
+                       _corner_shift[0].X,
+                       _corner_shift[0].Y,
+                       _corner_shift[1].X,
+                       _corner_shift[1].Y,
+                       ref _shiftX,
+                       ref _shiftY,
+                       ref _shiftAngle);
+                }
             }
+            
 
-            PointF imageP1 = _inspect[0].GetResult()[0];
-            PointF imageP2 = _inspect[1].GetResult()[0];
+            
 
-            imageP1.X += _roi[0].X;
-            imageP1.Y += _roi[0].Y;
-
-            imageP2.X += _roi[1].X;
-            imageP2.Y += _roi[1].Y;
-
-            PointF cartesianP1 = GetCartesianPoint(imageP1, _eCamera[0], _ccdCenterPoint[0]);
-            PointF cartesianP2 = GetCartesianPoint(imageP2, _eCamera[1], _ccdCenterPoint[1]);
-
-            double oriDistance = GetDistance(_corners[0], _corners[1]);
-            double nowDistance = GetDistance(cartesianP1, cartesianP2);
-            if (Math.Abs(nowDistance - oriDistance) > _distanceTolerance)
-            {
-                ErrorCode = "Size Error";
-                return;
-            }
-
-            PointF shiftP1 = new PointF(cartesianP1.X - _corners[0].X, cartesianP1.Y - _corners[0].Y);
-            PointF shiftP2 = new PointF(cartesianP2.X - _corners[1].X, cartesianP2.Y - _corners[1].Y);
-
-            if (_alignType == AlignType.PanelOnTable)
-            {
-                _alignAlgorithm.vGetShift(
-                   shiftP1.X,
-                   shiftP1.Y,
-                   shiftP2.X,
-                   shiftP2.Y,
-                   ref _shiftX,
-                   ref _shiftY,
-                   ref _shiftAngle);
-            }
-            else if (_alignType == AlignType.PanelOnHand)
-            {
-                _alignAlgorithm.vGetShiftByPoint(
-                   shiftP1.X,
-                   shiftP1.Y,
-                   shiftP2.X,
-                   shiftP2.Y,
-                   ref _shiftX,
-                   ref _shiftY,
-                   ref _shiftAngle);
-            }
-
-            ErrorCode = "";
+            Error = ErrorCode.None;
             _success = true;
+        }
+
+        public PointF GetCornerShift(CornerIndex CornerIndex)
+        {
+            
+            return _corner_shift[(int)CornerIndex];
         }
 
         public void LearnPanelMatchModel(int CornerIndex, Image<Bgr, byte> SrcImage, PointF ModelSize)
@@ -291,10 +531,12 @@ namespace VisionLibrary
             ShiftX = _shiftX;
             ShiftY = _shiftY;
 
-            double BufShiftAngle = ShiftAngle % 360.0;
-            if (BufShiftAngle > 180)
-                BufShiftAngle = 360 - BufShiftAngle;
-            ShiftAngle = BufShiftAngle;
+            ShiftAngle = -_shiftAngle;
+
+            if(ShiftAngle > 180)
+                ShiftAngle -= 360;
+            if(ShiftAngle < -180)
+                ShiftAngle += 360;
         }
 
         private PointF GetCartesianPoint(PointF ImagePos, ECamera Camera, PointF CCDCenterP)
@@ -373,6 +615,14 @@ namespace VisionLibrary
                     break;
             }
 
+            for (int i = 0; i < 2; i++)
+            {
+                _corners[i].X += _panelCenterShift.X;
+                _corners[i].Y += _panelCenterShift.Y;
+            }
+
+            _corners[1] = RotateByCorner1(_corners[1]);
+
             Point p = GetImagePoint(_eCamera[0], _corners[0], _ccdCenterPoint[0]);
             RefreshROI(0, p);
 
@@ -439,7 +689,22 @@ namespace VisionLibrary
         {
             RectangleF CCDRectangle = GetCartesianCCDRetangle(CornerIndex);
 
-            RectangleF Panel = new RectangleF(_panelCenter.X - _panelSize.X / 2, _panelCenter.Y - _panelSize.Y / 2, (float)_panelSize.X, (float)_panelSize.Y);
+            // 面板四角依中心偏移、Corner1旋轉後取外接矩形(ZoomWindow只能畫軸向矩形)
+            float centerX = _panelCenter.X + _panelCenterShift.X;
+            float centerY = _panelCenter.Y + _panelCenterShift.Y;
+            float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+            for (int i = 0; i < 4; i++)
+            {
+                PointF c = new PointF(
+                    centerX + ((i == 0 || i == 3) ? _panelSize.X : -_panelSize.X) / 2,
+                    centerY + ((i == 0 || i == 1) ? _panelSize.Y : -_panelSize.Y) / 2);
+                c = RotateByCorner1(c);
+                minX = Math.Min(minX, c.X);
+                minY = Math.Min(minY, c.Y);
+                maxX = Math.Max(maxX, c.X);
+                maxY = Math.Max(maxY, c.Y);
+            }
+            RectangleF Panel = new RectangleF(minX, minY, maxX - minX, maxY - minY);
 
             if (CCDRectangle.IntersectsWith(Panel))
             {
@@ -453,6 +718,16 @@ namespace VisionLibrary
         public void SetRotateCenter(PointF RotateCenter)
         {
             _rotateCenter = RotateCenter;
+        }
+
+        public void SetCCD2CenterPoint(PointF CenterPoint)
+        {
+            _ccdCenterPoint[1] = CenterPoint;
+        }
+
+        public PointF GetCCDCenterPoint(CornerIndex Idx)
+        {
+            return _ccdCenterPoint[(int)Idx];
         }
 
         public void ReadSetting()
@@ -494,6 +769,8 @@ namespace VisionLibrary
                     _inspect[i] = new MatchObjectDef(dir, i);
                 else if (_processType[i] == EProcessType.FindCorner)
                     _inspect[i] = new FindCornerDef(dir, i);
+
+                _inspect2[i] = new FindHoleDef(dir, i);
             }
             UpdateCorner();
 
@@ -507,6 +784,8 @@ namespace VisionLibrary
             {
                 if (_inspect[i] != null)
                     _inspect[i].Dispose();
+                if (_inspect2[i] != null)
+                    _inspect2[i].Dispose();
             }
         }
 

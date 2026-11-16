@@ -1,4 +1,5 @@
-﻿using Emgu.CV;
+﻿using CommonLibrary;
+using Emgu.CV;
 using Emgu.CV.Structure;
 using FileStreamLibrary;
 using System;
@@ -15,6 +16,7 @@ namespace VisionLibrary
         MatchObject,
         JudgeObject,
         FindCorner,
+        FindEdge,
         Count
     }
 
@@ -46,8 +48,9 @@ namespace VisionLibrary
         private ECamera[] _recCamera = { };
         private DateTime[] _recCam_dt;
         private string _viedoRecPath;
-
+        private string _saveDir = string.Empty;
         public bool ComponentsReady = true;
+        private bool _saveImage = false;
         public VisionManagerDef(string SystemDirPath, string ViedoRecPath)
         {
             _systemDirPath = SystemDirPath;
@@ -85,12 +88,52 @@ namespace VisionLibrary
                 _doTaskPanelAlign = new bool[(int)EAlign.Count];
                 _eCamerasPanelAlign = new ECamera[(int)EAlign.Count][];
 
+                string dir = _systemDirPath + "\\Vision\\";
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+                IniFile ini = new IniFile(dir + "Vision.ini", true);
+
+                for (int i = 0; i < _doTaskSearchPoint.Length; i++)
+                {
+                    string section = "SearchPoint_";
+                    section += ((ESearchPoint)i).ToString();
+                    _eCamerasSearchPoint[i] = (ECamera)Enum.Parse(typeof(ECamera), ini.ReadStr(section, "ECamera", ECamera.Count.ToString()));
+                }
+
+                for (int i = 0; i < _doTaskJudgeROI.Length; i++)
+                {
+                    string section = "JudgeROI_";
+                    section += ((EImageJudge)i).ToString();
+                    _eCamerasJudgeROI[i] = (ECamera)Enum.Parse(typeof(ECamera), ini.ReadStr(section, "ECamera", ECamera.Count.ToString()));
+                }
+
+                for (int i = 0; i < _doTaskPanelAlign.Length; i++)
+                {
+                    string section = "PanelAlign_";
+                    section += ((EAlign)i).ToString();
+                    _eCamerasPanelAlign[i] = new ECamera[2];
+                    _eCamerasPanelAlign[i][0] = (ECamera)Enum.Parse(typeof(ECamera), ini.ReadStr(section, "ECamera0", ECamera.Count.ToString()));
+                    _eCamerasPanelAlign[i][1] = (ECamera)Enum.Parse(typeof(ECamera), ini.ReadStr(section, "ECamera1", ECamera.Count.ToString()));
+                }
+
+                _saveImage = ini.ReadBool("System", "SaveImage", false);
+                _saveDir = ini.ReadStr("System", "SaveDir", string.Empty);
+
+                if(_saveImage)
+                {
+                    if (!Directory.Exists(_saveDir))
+                        Directory.CreateDirectory(_saveDir);
+                }
+
+                ini.FileClose();
+                ini.Dispose();
+
                 for (int i = 0; i < _taskJudgeROI.Length; i++)
                 {
                     _judgeROI[i] = new JudgeROIDef(_systemDirPath, _cameraCollection, _eCamerasJudgeROI[i], i);
 
                     _taskJudgeROI[i] = new Thread(RunTaskJudgeROI);
-                    _taskJudgeROI[i].Priority = ThreadPriority.Normal;
+                    _taskJudgeROI[i].Priority = ThreadPriority.BelowNormal;
                     _taskJudgeROI[i].IsBackground = true;
                     _taskJudgeROI[i].Start(i);
                 }
@@ -100,18 +143,18 @@ namespace VisionLibrary
                     _searchPoint[i] = new SearchPointDef(_systemDirPath, _cameraCollection, _eCamerasSearchPoint[i], i);
 
                     _taskSearchPoint[i] = new Thread(RunTaskSearchPoint);
-                    _taskSearchPoint[i].Priority = ThreadPriority.Normal;
+                    _taskSearchPoint[i].Priority = ThreadPriority.BelowNormal;
                     _taskSearchPoint[i].IsBackground = true;
                     _taskSearchPoint[i].Start(i);
                 }
 
                 for (int i = 0; i < _taskPanelAlign.Length; i++)
                 {
-                    _eCamerasPanelAlign[i] = new ECamera[2];
+                    
                     _panelAlign[i] = new PanelAlignDef(_systemDirPath, _cameraCollection, _eCamerasPanelAlign[i][0], _eCamerasPanelAlign[i][1], i);
 
                     _taskPanelAlign[i] = new Thread(RunTaskPanelAlign);
-                    _taskPanelAlign[i].Priority = ThreadPriority.Normal;
+                    _taskPanelAlign[i].Priority = ThreadPriority.BelowNormal;
                     _taskPanelAlign[i].IsBackground = true;
                     _taskPanelAlign[i].Start(i);
                 }
@@ -124,8 +167,121 @@ namespace VisionLibrary
             }
             catch (Exception e)
             {
+                LogDef.Add(
+                    ELogFileName.Vision,
+                    this.GetType().Name,
+                    System.Reflection.MethodBase.GetCurrentMethod().Name,
+                    e.ToString());
                 MessageBox.Show(e.ToString());
             }
+        }
+
+        private void YuanXin(double x1, double y1, double x2, double y2, double R, ref double x, ref double y)
+        {
+            double c1 = (x2 * x2 - x1 * x1 + y2 * y2 - y1 * y1) / (2 * (x2 - x1));
+            double c2 = (y2 - y1) / (x2 - x1);
+            double A = (c2 * c2 + 1);
+            double B = (2 * x1 * c2 - 2 * c1 * c2 - 2 * y1);
+            double C = x1 * x1 - 2 * x1 * c1 + c1 * c1 + y1 * y1 - R * R;
+
+            y = (-B + Math.Sqrt(B * B - 4 * A * C)) / (2 * A);
+            x = c1 - c2 * y;
+        }
+
+        public PointF GetRobotCenter(ECamera eCAMERA, PointF resultP1, PointF resultP2, double rotateAngle)
+        {
+            PointF P1 = GetCartesianPoint(resultP1, eCAMERA, new PointF(0, 0));
+            PointF P2 = GetCartesianPoint(resultP2, eCAMERA, new PointF(0, 0));
+
+            double P1X = P1.X;
+            double P1Y = P1.Y;
+            double P2X = P2.X;
+            double P2Y = P2.Y;
+
+            LogDef.Add(
+                    ELogFileName.Engineer,
+                    this.GetType().Name,
+                    System.Reflection.MethodBase.GetCurrentMethod().Name,
+                    P1X.ToString("0.0") + "," +
+                    P1Y.ToString("0.0") + "," +
+                    P2X.ToString("0.0") + "," +
+                    P2Y.ToString("0.0") + ",");
+
+            double shiftD = Math.Sqrt((P2Y - P1Y) * (P2Y - P1Y) + (P2X - P1X) * (P2X - P1X));
+            double centerR = Math.Abs(shiftD / 2 / Math.Sin(rotateAngle / 2 * Math.PI / 180.0));
+
+            double P2P1Theta = Math.Atan2((P2Y - P1Y), (P2X - P1X)) * 180 / Math.PI;
+
+            double cX = 0;
+            double cY = 0;
+            YuanXin(P1X, P1Y, P2X, P2Y, centerR, ref cX, ref cY);
+
+            double cX2 = (P2X + P1X) - cX;
+            double cY2 = (P2Y + P1Y) - cY;
+
+            if (rotateAngle > 0)
+            {
+                if (P2P1Theta < 90 && P2P1Theta > 0)
+                {
+                    if (cX > cX2)
+                        return new PointF((float)(cX2), (float)(cY2));
+                    else
+                        return new PointF((float)(cX), (float)(cY));
+                }
+                else if (P2P1Theta < 180 && P2P1Theta > 90)
+                {
+                    if (cX > cX2)
+                        return new PointF((float)(cX2), (float)(cY2));
+                    else
+                        return new PointF((float)(cX), (float)(cY));
+                }
+                else if (P2P1Theta < 0 && P2P1Theta > -90)
+                {
+                    if (cX > cX2)
+                        return new PointF((float)(cX), (float)(cY));
+                    else
+                        return new PointF((float)(cX2), (float)(cY2));
+                }
+                else if (P2P1Theta < -90 && P2P1Theta > -180)
+                {
+                    if (cX > cX2)
+                        return new PointF((float)(cX), (float)(cY));
+                    else
+                        return new PointF((float)(cX2), (float)(cY2));
+                }
+            }
+            else
+            {
+                if (P2P1Theta < 90 && P2P1Theta > 0)
+                {
+                    if (cX > cX2)
+                        return new PointF((float)(cX), (float)(cY));
+                    else
+                        return new PointF((float)(cX2), (float)(cY2));
+                }
+                else if (P2P1Theta < 180 && P2P1Theta > 90)
+                {
+                    if (cX > cX2)
+                        return new PointF((float)(cX), (float)(cY));
+                    else
+                        return new PointF((float)(cX2), (float)(cY2));
+                }
+                else if (P2P1Theta < 0 && P2P1Theta > -90)
+                {
+                    if (cX > cX2)
+                        return new PointF((float)(cX2), (float)(cY2));
+                    else
+                        return new PointF((float)(cX), (float)(cY));
+                }
+                else if (P2P1Theta < -90 && P2P1Theta > -180)
+                {
+                    if (cX > cX2)
+                        return new PointF((float)(cX2), (float)(cY2));
+                    else
+                        return new PointF((float)(cX), (float)(cY));
+                }
+            }
+            return new PointF((float)(cX), (float)(cY));
         }
 
         public int GetViedoCamNum()
@@ -199,14 +355,14 @@ namespace VisionLibrary
             _cameraCollection.SetExposureByDefault(CAMERA);
         }
 
-        private void SetSearchPoint(ESearchPoint Index, PointF MMP)
+        private void SetSearchPoint(ESearchPoint Index, PointF MMP, int ROI_Index = 0)
         {
-            _searchPoint[(int)Index].SetSearchPoint(MMP);
+            _searchPoint[(int)Index].SetSearchPoint(MMP, ROI_Index);
         }
 
-        public void ShiftSearchPoint(ESearchPoint Index, PointF Shift)
+        public void ShiftSearchPoint(ESearchPoint Index, PointF Shift, int ROI_Index = 0)
         {
-            _searchPoint[(int)Index].ShiftSearchPoint(Shift);
+            _searchPoint[(int)Index].ShiftSearchPoint(Shift, ROI_Index);
         }
 
         public SearchPointDef GetSearchPoint(ESearchPoint Index)
@@ -218,6 +374,9 @@ namespace VisionLibrary
         }
         public Rectangle GetPanelOnImage(EAlign AlignIndex, ECamera Camera)
         {
+            if (_eCamerasPanelAlign == null || _eCamerasPanelAlign[(int)AlignIndex] == null || _panelAlign == null || _panelAlign[(int)AlignIndex] == null)
+                return Rectangle.Empty;
+
             if (_eCamerasPanelAlign[(int)AlignIndex][0] == Camera)
             {
                 return _panelAlign[(int)AlignIndex].GetPanelOnImage(0);
@@ -260,12 +419,42 @@ namespace VisionLibrary
             if (AlignIndex == EAlign.Count || (int)AlignIndex < 0 || (int)Corner < 0 || (int)Camera < 0 || Corner == PanelAlignDef.CornerIndex.Count || Camera == ECamera.Count)
                 return Rectangle.Empty; ;
 
+            if (_eCamerasPanelAlign == null || _eCamerasPanelAlign[(int)AlignIndex] == null || _panelAlign == null || _panelAlign[(int)AlignIndex] == null)
+                return Rectangle.Empty;
+
             if (_eCamerasPanelAlign[(int)AlignIndex][(int)Corner] == Camera)
             {
                 return _panelAlign[(int)AlignIndex].GetROI((int)Corner);
             }
 
             return Rectangle.Empty;
+        }
+
+        public PointF GetCartesianPoint(PointF ImagePos, ECamera Camera, PointF CCDCenterP)
+        {
+            ImagePos.X -= _cameraCollection.GetWidth(Camera) / 2;
+            ImagePos.Y -= _cameraCollection.GetHeight(Camera) / 2;
+
+            if (_cameraCollection.GetXInverse(Camera))
+                ImagePos.X *= -1;
+
+            if (_cameraCollection.GetYInverse(Camera))
+                ImagePos.Y *= -1;
+
+            PointF pos = new PointF();
+            pos.X = ImagePos.X;
+            pos.Y = ImagePos.Y;
+
+            if (_cameraCollection.GetXYSwap(Camera))
+            {
+                pos.X = ImagePos.Y;
+                pos.Y = ImagePos.X;
+            }
+
+            pos.X = (float)(_cameraCollection.GetResolution(Camera) * pos.X) + CCDCenterP.X;
+            pos.Y = (float)(_cameraCollection.GetResolution(Camera) * pos.Y) + CCDCenterP.Y;
+
+            return pos;
         }
 
         public void ReadSetting()
@@ -277,43 +466,15 @@ namespace VisionLibrary
             for (int i = 0; i < _panelAlign.Length; i++)
                 _panelAlign[i].ReadSetting();
 
-            string dir = _systemDirPath + "\\Vision\\";
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            IniFile ini = new IniFile(dir + "Vision.ini", true);
-
-            for (int i = 0; i < _doTaskSearchPoint.Length; i++)
-            {
-                string section = "SearchPoint_";
-                section += ((ESearchPoint)i).ToString();
-                _eCamerasSearchPoint[i] = (ECamera)Enum.Parse(typeof(ECamera), ini.ReadStr(section, "ECamera", ECamera.Count.ToString()));
-            }
-
-            for (int i = 0; i < _doTaskJudgeROI.Length; i++)
-            {
-                string section = "JudgeROI_";
-                section += ((EImageJudge)i).ToString();
-                _eCamerasJudgeROI[i] = (ECamera)Enum.Parse(typeof(ECamera), ini.ReadStr(section, "ECamera", ECamera.Count.ToString()));
-            }
-
-            for (int i = 0; i < _doTaskPanelAlign.Length; i++)
-            {
-                string section = "PanelAlign_";
-                section += ((EAlign)i).ToString();
-
-                _eCamerasPanelAlign[i][0] = (ECamera)Enum.Parse(typeof(ECamera), ini.ReadStr(section, "ECamera0", ECamera.Count.ToString()));
-                _eCamerasPanelAlign[i][1] = (ECamera)Enum.Parse(typeof(ECamera), ini.ReadStr(section, "ECamera1", ECamera.Count.ToString()));
-            }
-
-            ini.FileClose();
-            ini.Dispose();
+            
         }
 
-        public void SearchPointInsepct(ESearchPoint Index)
+        public void SearchPointInsepct(ESearchPoint Index, int ROI_Index = 0)
         {
            // Image<Bgr, byte> img = new Image<Bgr, byte>(_cameraCollection.GetWidth(_eCamerasSearchPoint[(int)Index]), _cameraCollection.GetHeight(_eCamerasSearchPoint[(int)Index]));
            // _cameraCollection.CopyImage(_eCamerasSearchPoint[(int)Index], img);
-            _searchPoint[(int)Index].Inspect(_images[(int)_eCamerasSearchPoint[(int)Index]]);
+
+            _searchPoint[(int)Index].Inspect(_images[(int)_eCamerasSearchPoint[(int)Index]], ROI_Index);
         }
 
         public void JudgeInsepct(EImageJudge Index)
@@ -360,6 +521,11 @@ namespace VisionLibrary
                             {
                                 _cameraCollection.CopyImage(_eCamerasPanelAlign[index][0], _images[(int)_eCamerasPanelAlign[index][0]]);
                                 _panelAlign[index].Align(_images[(int)_eCamerasPanelAlign[index][0]], _images[(int)_eCamerasPanelAlign[index][0]]);
+                                if(_saveImage)
+                                {
+                                    string savePath = _saveDir + "\\PanelAlign" + index.ToString() + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".jpg";
+                                    _images[(int)_eCamerasPanelAlign[index][0]].Save(savePath);
+                                }
                             }
                             else
                             {
@@ -367,6 +533,15 @@ namespace VisionLibrary
                                 _cameraCollection.CopyImage(_eCamerasPanelAlign[index][1], _images[(int)_eCamerasPanelAlign[index][1]]);
 
                                 _panelAlign[index].Align(_images[(int)_eCamerasPanelAlign[index][0]], _images[(int)_eCamerasPanelAlign[index][1]]);
+
+                                if (_saveImage)
+                                {
+                                    string savePath = _saveDir + "\\PanelAlign" + index.ToString() + "_" + DateTime.Now.ToString("0_yyyyMMdd_HHmmss") + ".jpg";
+                                    _images[(int)_eCamerasPanelAlign[index][0]].Save(savePath);
+                                    savePath = _saveDir + "\\PanelAlign" + index.ToString() + "_" + DateTime.Now.ToString("1_yyyyMMdd_HHmmss") + ".jpg";
+                                    _images[(int)_eCamerasPanelAlign[index][1]].Save(savePath);
+                                }
+
                             }
                         }
                         _doTaskPanelAlign[index] = false;
@@ -397,6 +572,12 @@ namespace VisionLibrary
                         {
                             _cameraCollection.CopyImage(_eCamerasJudgeROI[index], _images[(int)_eCamerasJudgeROI[index]]);
                             _judgeROI[index].Inspect(_images[(int)_eCamerasJudgeROI[index]]);
+
+                            if (_saveImage)
+                            {
+                                string savePath = _saveDir + "\\JudgeROI" + index.ToString() + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".jpg";
+                                _images[(int)_eCamerasPanelAlign[index][0]].Save(savePath);
+                            }
                         }
                         _doTaskJudgeROI[index] = false;
                     }
@@ -422,7 +603,19 @@ namespace VisionLibrary
                         if (index < (int)ESearchPoint.Count)
                         {
                             _cameraCollection.CopyImage(_eCamerasSearchPoint[index], _images[(int)_eCamerasSearchPoint[index]]);
-                            _searchPoint[index].Inspect(_images[(int)_eCamerasSearchPoint[index]]);
+                            for(int i = 0; i < _searchPoint[index].GetInspectNum(); i++)
+                            {
+                                Thread.Sleep(5);
+                                _searchPoint[index].Inspect(_images[(int)_eCamerasSearchPoint[index]], i);
+                                
+                            }
+
+                            if (_saveImage)
+                            {
+                                string savePath = _saveDir + "\\SearchPoint" + index.ToString() + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".jpg";
+                                _images[(int)_eCamerasPanelAlign[index][0]].Save(savePath);
+                            }
+
                         }
                         _doTaskSearchPoint[index] = false;
                     }
@@ -435,9 +628,9 @@ namespace VisionLibrary
             }
         }
 
-        public PointF[] GetResult(ESearchPoint Index)
+        public PointF[] GetResult(ESearchPoint Index, int ROI_Index = 0)
         {
-            return _searchPoint[(int)Index].GetResult();
+            return _searchPoint[(int)Index].GetResult(ROI_Index);
         }
 
         public bool IsCorrect(EImageJudge Index)
@@ -448,19 +641,23 @@ namespace VisionLibrary
 
         public void Dispose()
         {
+
             for (int i = 0; i < _taskSearchPoint.Length; i++)
             {
-                _taskSearchPoint[i].Abort();
+                if(_taskSearchPoint[i] != null)
+                    _taskSearchPoint[i].Abort();
             }
 
             for (int i = 0; i < _taskJudgeROI.Length; i++)
             {
-                _taskJudgeROI[i].Abort();
+                if (_taskJudgeROI[i] != null)
+                    _taskJudgeROI[i].Abort();
             }
 
             for (int i = 0; i < _taskPanelAlign.Length; i++)
             {
-                _taskPanelAlign[i].Abort();
+                if (_taskPanelAlign[i] != null)
+                    _taskPanelAlign[i].Abort();
             }
 
             if (_cameraCollection != null)
